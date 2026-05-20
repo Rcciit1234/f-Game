@@ -1,4 +1,4 @@
-# PRO 6x6 FOOTBALL
+# 6x6 3D Football Game
 
 A professional 2D football (soccer) game — 6v6 with realistic stadium, animated players, crowd, and floodlights.
 

@@ -45,14 +45,14 @@ export class MainMenu {
       margin-bottom: 0.25rem; position: relative;
       text-shadow: 0 0 80px rgba(0,240,255,0.3);
     `;
-    title.textContent = 'VOLTGOAL';
+    title.textContent = '6x6 FOOTBALL';
 
     const subtitle = document.createElement('p');
     subtitle.style.cssText = `
       font-size: 0.85rem; color: rgba(0,240,255,0.5); margin-bottom: 2.5rem;
       letter-spacing: 6px; text-transform: uppercase;
     `;
-    subtitle.textContent = '6v6 Football';
+    subtitle.textContent = '3D Football Game';
 
     // Name input
     const inputContainer = document.createElement('div');

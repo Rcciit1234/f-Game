@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PRO 6x6 FOOTBALL | Ultimate Arena</title>
+    <title>PRO 6x6 FOOTBALL | Online Arena</title>
     <link rel="stylesheet" href="style.css">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 </head>
@@ -13,9 +13,16 @@
         <div class="lights right"></div>
 
         <div class="game-container">
-            <div class="hud">
+
+            <div class="game-top-actions">
+                <button id="ground-toggle" class="toggle-btn" title="Switch ground color">🏟</button>
+                <button id="scoreboard-toggle" class="toggle-btn" title="Toggle scoreboard style">⊞</button>
+            </div>
+
+            <!-- Scoreboard A -->
+            <div class="hud" id="scoreboard-a">
                 <div class="team player">
-                    <span class="name">PLAYER</span>
+                    <span class="name" id="p1-name">P1 BLUE</span>
                     <span id="player-score" class="score">0</span>
                 </div>
                 <div class="timer">
@@ -23,40 +30,284 @@
                 </div>
                 <div class="team opponent">
                     <span id="opponent-score" class="score">0</span>
-                    <span class="name">AI ELITE</span>
+                    <span class="name" id="p2-name">P2 RED</span>
+                </div>
+            </div>
+
+            <!-- Scoreboard B -->
+            <div class="hud-b hidden" id="scoreboard-b">
+                <div class="team-badge player">
+                    <span class="name" id="p1-name-b">P1 BLUE</span>
+                    <span id="player-score-b" class="score-b">0</span>
+                </div>
+                <div class="timer-b">
+                    <span id="match-timer-b">01:00</span>
+                </div>
+                <div class="team-badge opponent">
+                    <span id="opponent-score-b" class="score-b">0</span>
+                    <span class="name" id="p2-name-b">P2 RED</span>
                 </div>
             </div>
 
             <canvas id="gameCanvas"></canvas>
 
-            <div id="start-screen" class="overlay">
+            <!-- Waiting overlay during matching -->
+            <div id="waiting-overlay" class="overlay hidden">
                 <div class="content">
+                    <div class="loading-spinner"></div>
+                    <p id="waiting-text">Connecting...</p>
+                </div>
+            </div>
+
+            <!-- GOAL alert -->
+            <div id="goal-alert" class="goal-alert hidden">GOAL!</div>
+        </div>
+
+        <!-- ─── MAIN MENU ─── -->
+        <div id="main-menu" class="overlay">
+            <div class="menu-container">
+                <div class="menu-header">
                     <h1>PRO 6x6 FOOTBALL</h1>
-                    <p>Experience the ultimate arena. First to score more in 1 minute wins.</p>
-                    <button id="start-btn" class="cta-btn">KICK OFF</button>
-                    <div class="controls-hint">
-                        <span><i class="fa-solid fa-arrows-up-down-left-right"></i> WASD / ARROWS</span>
-                        <span><i class="fa-solid fa-bolt"></i> SPACE TO SHOOT</span>
+                    <p class="menu-subtitle">Online Multiplayer Arena</p>
+                </div>
+
+                <!-- Tab Buttons -->
+                <div class="menu-tabs">
+                    <button class="menu-tab active" data-tab="signin"><i class="fa-solid fa-user"></i> Sign In</button>
+                    <button class="menu-tab" data-tab="play"><i class="fa-solid fa-gamepad"></i> Play</button>
+                    <button class="menu-tab" data-tab="guide"><i class="fa-solid fa-book"></i> Guide</button>
+                </div>
+
+                <!-- Tab: Sign In -->
+                <div class="menu-tab-content active" id="tab-signin">
+                    <div class="signin-section">
+                        <div id="g_id_onload"
+                             data-client_id="457479229860-2eg25haho3f30lh24eu9582tp1g3ahtf.apps.googleusercontent.com"
+                             data-context="signin"
+                             data-ux_mode="popup"
+                             data-callback="handleGoogleCredential"
+                             data-auto_select="false"
+                             data-itp_support="true">
+                        </div>
+                        <div class="g_id_signin" data-type="standard" data-shape="rectangular" data-theme="outline" data-text="signin_with" data-size="large" data-logo_alignment="left">
+                        </div>
+                        <div class="signin-divider"><span>or</span></div>
+                        <div class="name-input-row">
+                            <input type="text" id="name-input" class="name-input" placeholder="Enter your name" maxlength="16" value="">
+                            <button id="name-signin-btn" class="cta-btn" disabled>Set Name</button>
+                        </div>
+                        <div id="user-info" class="user-info hidden">
+                            <img id="user-avatar" class="user-avatar" src="" alt="">
+                            <span id="user-display-name"></span>
+                            <button id="user-signout" class="text-btn">Sign out</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tab: Play -->
+                <div class="menu-tab-content" id="tab-play">
+                    <div class="play-section" id="play-buttons">
+                        <button id="create-room-btn" class="cta-btn cta-primary" disabled>
+                            <i class="fa-solid fa-plus"></i> Create Room
+                        </button>
+                        <div class="join-row">
+                            <input type="text" id="room-code-input" class="name-input room-input" placeholder="Enter room code" maxlength="5" style="text-transform:uppercase">
+                            <button id="join-room-btn" class="cta-btn cta-secondary" disabled>
+                                <i class="fa-solid fa-right-to-bracket"></i> Join
+                            </button>
+                        </div>
+                    </div>
+                    <div id="room-info" class="room-info hidden">
+                        <p class="room-status-msg">Set your name to play</p>
+                    </div>
+                </div>
+
+                <!-- Tab: Guide -->
+                <div class="menu-tab-content" id="tab-guide">
+                    <div class="guide-section">
+                        <div class="guide-block">
+                            <h3><i class="fa-solid fa-bullseye"></i> Objective</h3>
+                            <p>Score more goals than your opponent in 1 minute. First to 5 goals wins early!</p>
+                        </div>
+                        <div class="guide-block">
+                            <h3><i class="fa-solid fa-keyboard"></i> Controls</h3>
+                            <div class="guide-controls">
+                                <div class="guide-col">
+                                    <h4 class="ctrl-p1-color">P1 Blue (Keyboard)</h4>
+                                    <div class="guide-key"><span class="key">W A S D</span> Move</div>
+                                    <div class="guide-key"><span class="key">C</span> Shoot</div>
+                                    <div class="guide-key"><span class="key">E</span> Pass</div>
+                                    <div class="guide-key"><span class="key">Q</span> Tackle</div>
+                                    <div class="guide-key"><span class="key">Z</span> Switch Player</div>
+                                </div>
+                                <div class="guide-col">
+                                    <h4 class="ctrl-p2-color">P2 Red (Keyboard)</h4>
+                                    <div class="guide-key"><span class="key">I K J L</span> Move</div>
+                                    <div class="guide-key"><span class="key">F</span> Shoot</div>
+                                    <div class="guide-key"><span class="key">G</span> Pass</div>
+                                    <div class="guide-key"><span class="key">H</span> Tackle</div>
+                                    <div class="guide-key"><span class="key">N</span> Switch Player</div>
+                                </div>
+                            </div>
+                            <p class="guide-note">P2 can also use <strong>on-screen buttons</strong> on touch devices.</p>
+                        </div>
+                        <div class="guide-block">
+                            <h3><i class="fa-solid fa-users"></i> How to Play Online</h3>
+                            <ol>
+                                <li>Set your name in <strong>Sign In</strong></li>
+                                <li>Go to <strong>Play</strong> tab</li>
+                                <li>Host: Click <strong>Create Room</strong>, share the code</li>
+                                <li>Guest: Enter the code and click <strong>Join</strong></li>
+                                <li>Host clicks <strong>Start Game</strong> when both are ready</li>
+                            </ol>
+                        </div>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <div id="game-over-screen" class="overlay hidden">
-                <div class="content">
-                    <h2 id="result-text">MATCH ENDED</h2>
-                    <div class="final-score">
-                        <span id="final-player-score">0</span> - <span id="final-opponent-score">0</span>
+        <!-- ─── ROOM SCREEN ─── -->
+        <div id="room-screen" class="overlay hidden">
+            <div class="room-container">
+                <div class="room-header">
+                    <h2>Game Room</h2>
+                    <button id="room-leave-btn" class="text-btn"><i class="fa-solid fa-xmark"></i> Leave</button>
+                </div>
+                <div class="room-code-display">
+                    <span class="room-code-label">Room Code</span>
+                    <div class="room-code-value" id="room-code-display">-----</div>
+                    <button id="copy-code-btn" class="text-btn"><i class="fa-regular fa-copy"></i> Copy</button>
+                </div>
+                <div class="room-players">
+                    <div class="room-player" id="room-player-host">
+                        <span class="room-player-dot host"></span>
+                        <span class="room-player-name">Waiting...</span>
+                        <span class="room-player-badge">Host</span>
                     </div>
-                    <button id="restart-btn" class="cta-btn">REMATCH</button>
+                    <div class="room-player" id="room-player-guest">
+                        <span class="room-player-dot"></span>
+                        <span class="room-player-name">Waiting for opponent...</span>
+                    </div>
+                </div>
+                <button id="room-start-btn" class="cta-btn cta-primary" disabled>
+                    <i class="fa-solid fa-play"></i> Start Game
+                </button>
+                <p class="room-hint" id="room-hint">Share the room code with your opponent</p>
+            </div>
+        </div>
+
+        <!-- ─── GAME OVER SCREEN ─── -->
+        <div id="game-over-screen" class="overlay hidden">
+            <div class="content">
+                <h2 id="result-text">MATCH ENDED</h2>
+                <div class="final-score">
+                    <span id="final-player-score">0</span> - <span id="final-opponent-score">0</span>
+                </div>
+                <button id="return-menu-btn" class="cta-btn">Return to Menu</button>
+            </div>
+        </div>
+
+        <!-- ─── ON-SCREEN CONTROLLERS ─── -->
+        <div class="controller-p1" id="controller-p1">
+            <div class="ctrl-panel">
+                <div class="ctrl-dpad">
+                    <button class="ctrl-btn ctrl-up" data-key="KeyW">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        <span class="ctrl-key">W</span>
+                    </button>
+                    <div class="ctrl-dpad-row">
+                        <button class="ctrl-btn ctrl-left" data-key="KeyA">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span class="ctrl-key">A</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-down" data-key="KeyS">
+                            <i class="fa-solid fa-arrow-down"></i>
+                            <span class="ctrl-key">S</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-right" data-key="KeyD">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            <span class="ctrl-key">D</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="ctrl-actions">
+                    <div class="ctrl-actions-row">
+                        <button class="ctrl-btn ctrl-pass" data-key="KeyE">
+                            <span class="ctrl-label">PASS</span>
+                            <span class="ctrl-key">E</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-shoot" data-key="KeyC">
+                            <span class="ctrl-label">SHOOT</span>
+                            <span class="ctrl-key">C</span>
+                        </button>
+                    </div>
+                    <div class="ctrl-actions-row">
+                        <button class="ctrl-btn ctrl-tackle" data-key="KeyQ">
+                            <span class="ctrl-label">TACKL</span>
+                            <span class="ctrl-key">Q</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-switch" data-key="KeyZ">
+                            <span class="ctrl-label">SWITCH</span>
+                            <span class="ctrl-key">Z</span>
+                        </button>
+                    </div>
                 </div>
             </div>
+            <div class="ctrl-player-label" id="p1-ctrl-label">P1 BLUE</div>
+        </div>
 
-            <div id="goal-alert" class="goal-alert hidden">
-                GOAL!
+        <div class="controller-p2" id="controller-p2">
+            <div class="ctrl-panel">
+                <div class="ctrl-dpad">
+                    <button class="ctrl-btn ctrl-up" data-key="KeyI">
+                        <i class="fa-solid fa-arrow-up"></i>
+                        <span class="ctrl-key">I</span>
+                    </button>
+                    <div class="ctrl-dpad-row">
+                        <button class="ctrl-btn ctrl-left" data-key="KeyJ">
+                            <i class="fa-solid fa-arrow-left"></i>
+                            <span class="ctrl-key">J</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-down" data-key="KeyK">
+                            <i class="fa-solid fa-arrow-down"></i>
+                            <span class="ctrl-key">K</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-right" data-key="KeyL">
+                            <i class="fa-solid fa-arrow-right"></i>
+                            <span class="ctrl-key">L</span>
+                        </button>
+                    </div>
+                </div>
+                <div class="ctrl-actions">
+                    <div class="ctrl-actions-row">
+                        <button class="ctrl-btn ctrl-pass" data-key="KeyG">
+                            <span class="ctrl-label">PASS</span>
+                            <span class="ctrl-key">G</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-shoot" data-key="KeyF">
+                            <span class="ctrl-label">SHOOT</span>
+                            <span class="ctrl-key">F</span>
+                        </button>
+                    </div>
+                    <div class="ctrl-actions-row">
+                        <button class="ctrl-btn ctrl-tackle" data-key="KeyH">
+                            <span class="ctrl-label">TACKL</span>
+                            <span class="ctrl-key">H</span>
+                        </button>
+                        <button class="ctrl-btn ctrl-switch" data-key="KeyN">
+                            <span class="ctrl-label">SWITCH</span>
+                            <span class="ctrl-key">N</span>
+                        </button>
+                    </div>
+                </div>
             </div>
+            <div class="ctrl-player-label" id="p2-ctrl-label">P2 RED</div>
         </div>
     </div>
 
+    <script>window.handleGoogleCredential = function(r){console.log('[Google] Callback fired', r);};</script>
+    <script src="https://accounts.google.com/gsi/client"></script>
+    <script src="https://cdn.socket.io/4.8.0/socket.io.min.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

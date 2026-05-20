@@ -4,11 +4,12 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev:client": "npx vite --host",
+    "dev:client": "npx vite --config client/vite.config.ts --host",
     "dev:server": "npx tsx watch server/src/index.ts",
     "dev": "concurrently -n server,client -c cyan,yellow \"npm run dev:server\" \"npm run dev:client\"",
     "build": "cd client && npx vite build",
-    "start": "node server/dist/index.js",
+    "start": "npx tsx server/src/index.ts",
+    "start:prod": "NODE_ENV=production npx tsx server/src/index.ts",
     "typecheck": "cd client && npx tsc --noEmit && cd ../server && npx tsc --noEmit"
   },
   "devDependencies": {
