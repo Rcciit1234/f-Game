@@ -1,0 +1,10 @@
+{
+  "build": {
+    "builder": "NIXPACKS",
+    "buildCommand": "cd client && npx vite build"
+  },
+  "deploy": {
+    "startCommand": "NODE_ENV=production npx tsx server/src/index.ts",
+    "healthcheckPath": "/health"
+  }
+}

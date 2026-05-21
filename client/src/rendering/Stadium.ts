@@ -486,10 +486,7 @@ export class Stadium {
       }
 
       const color = new THREE.Color();
-      // Mix of team colors and neutrals
-      const hue = Math.random() < 0.4
-        ? (Math.random() < 0.5 ? 0.6 : 0.05)
-        : 0.55 + Math.random() * 0.1;
+      const hue = (side === 0 || side === 2) ? 0.05 : 0.6;
       color.setHSL(hue, 0.3 + Math.random() * 0.4, 0.15 + Math.random() * 0.25);
 
       const spriteMat = new THREE.SpriteMaterial({

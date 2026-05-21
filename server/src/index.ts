@@ -24,8 +24,17 @@ const io = new SocketIOServer(server, {
   pingTimeout: 2000,
 });
 
-// Serve the 2D game static files from the project root
-app.use(express.static(path.join(__dirname, '..', '..')));
+// Serve the 3D game client build in production
+if (process.env.NODE_ENV === 'production') {
+  app.use(express.static(path.join(__dirname, '..', '..', 'client', 'dist')));
+  // SPA fallback - serve index.html for all non-API routes
+  app.get('*', (_req, res) => {
+    res.sendFile(path.join(__dirname, '..', '..', 'client', 'dist', 'index.html'));
+  });
+} else {
+  // Serve the 2D game static files from the project root (dev only)
+  app.use(express.static(path.join(__dirname, '..', '..')));
+}
 
 const matchManager = new MatchManager(io);
 const roomManager = new RoomManager(io);
