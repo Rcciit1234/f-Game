@@ -1,7 +1,8 @@
 {
+  "$schema": "https://railway.com/railway.schema.json",
   "build": {
-    "builder": "NIXPACKS",
-    "buildCommand": "cd client && npm install && npx vite build && cd ../server && npm install"
+    "builder": "RAILPACK",
+    "buildCommand": "npm run build"
   },
   "deploy": {
     "startCommand": "NODE_ENV=production npx tsx server/src/index.ts",
