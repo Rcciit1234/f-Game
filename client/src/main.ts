@@ -12,6 +12,11 @@ function init() {
       setTimeout(() => loadingScreen.remove(), 500);
     }, 1500);
   }
+
+  // Register service worker for PWA installability
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  }
 }
 
 if (document.readyState === 'loading') {
