@@ -1,7 +1,7 @@
 {
   "build": {
     "builder": "NIXPACKS",
-    "buildCommand": "cd client && npx vite build"
+    "buildCommand": "cd client && npm install && npx vite build && cd ../server && npm install"
   },
   "deploy": {
     "startCommand": "NODE_ENV=production npx tsx server/src/index.ts",
