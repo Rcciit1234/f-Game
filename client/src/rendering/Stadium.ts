@@ -467,9 +467,11 @@ export class Stadium {
 
   private createCrowd() {
     const HL = 50, HW = 34;
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    const crowdCount = isMobile ? 150 : 400;
 
     // Generate dense crowd sprites in all stands
-    for (let i = 0; i < 400; i++) {
+    for (let i = 0; i < crowdCount; i++) {
       const side = Math.floor(Math.random() * 4);
       const tier = Math.floor(Math.random() * 3);
       const tierOffsets = [3, 6, 9];

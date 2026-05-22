@@ -3,17 +3,22 @@ import { PlayerState, BallState, Team } from '../../../shared/index.js';
 export class Minimap {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
-  private size = 160;
+  private size: number;
+  private isMobile: boolean;
 
   constructor() {
+    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+    this.size = this.isMobile ? 100 : 160;
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.size;
     this.canvas.height = this.size;
     this.canvas.style.cssText = `
-      position: fixed; bottom: 40px; left: 50%; transform: translateX(-50%);
-      z-index: 101; border-radius: 50%;
+      position: fixed; z-index: 101; border-radius: 50%;
       background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
       border: 2px solid rgba(255,255,255,0.1);
+      ${this.isMobile
+        ? 'top: 10px; right: 10px;'
+        : 'bottom: 40px; left: 50%; transform: translateX(-50%);'}
     `;
     this.ctx = this.canvas.getContext('2d')!;
     document.body.appendChild(this.canvas);

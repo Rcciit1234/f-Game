@@ -8,8 +8,10 @@ export class SceneManager {
   public camera: THREE.PerspectiveCamera;
   public renderer: THREE.WebGLRenderer;
   public composer: EffectComposer;
+  public isMobile: boolean;
 
   constructor() {
+    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(0x87ceeb);
     this.scene.fog = new THREE.Fog(0x87ceeb, 150, 250);
@@ -19,12 +21,12 @@ export class SceneManager {
     this.camera.lookAt(0, 0, 0);
 
     this.renderer = new THREE.WebGLRenderer({
-      antialias: true,
-      powerPreference: 'high-performance',
+      antialias: !this.isMobile,
+      powerPreference: this.isMobile ? 'default' : 'high-performance',
     });
     this.renderer.setSize(window.innerWidth, window.innerHeight);
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    this.renderer.shadowMap.enabled = true;
+    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio, this.isMobile ? 1 : 2));
+    this.renderer.shadowMap.enabled = !this.isMobile;
     this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.2;
@@ -36,13 +38,16 @@ export class SceneManager {
     const renderPass = new RenderPass(this.scene, this.camera);
     this.composer.addPass(renderPass);
 
-    const bloomPass = new UnrealBloomPass(
-      new THREE.Vector2(window.innerWidth, window.innerHeight),
-      0.3,
-      0.5,
-      0.1
-    );
-    this.composer.addPass(bloomPass);
+    // Skip bloom on mobile for performance
+    if (!this.isMobile) {
+      const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.3,
+        0.5,
+        0.1
+      );
+      this.composer.addPass(bloomPass);
+    }
   }
 
   render() {

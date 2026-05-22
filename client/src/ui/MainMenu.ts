@@ -3,10 +3,12 @@ export class MainMenu {
   private nameInput: HTMLInputElement;
   private playBtn: HTMLButtonElement;
   private statusEl: HTMLDivElement;
+  private isMobile: boolean;
 
   public onPlay: ((name: string) => void) | null = null;
 
   constructor() {
+    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.container = document.createElement('div');
     this.container.id = 'main-menu';
     this.container.style.cssText = `
@@ -39,17 +41,17 @@ export class MainMenu {
     // Title with glow
     const title = document.createElement('h1');
     title.style.cssText = `
-      font-size: 5.5rem; font-weight: 900; letter-spacing: -3px;
+      font-size: clamp(2.5rem, 12vw, 5.5rem); font-weight: 900; letter-spacing: -3px;
       background: linear-gradient(135deg, #00f0ff, #8b5cf6, #00f0ff);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      margin-bottom: 0.25rem; position: relative;
+      margin-bottom: 0.25rem; position: relative; text-align: center;
       text-shadow: 0 0 80px rgba(0,240,255,0.3);
     `;
     title.textContent = '6x6 FOOTBALL';
 
     const subtitle = document.createElement('p');
     subtitle.style.cssText = `
-      font-size: 0.85rem; color: rgba(0,240,255,0.5); margin-bottom: 2.5rem;
+      font-size: clamp(0.6rem, 3vw, 0.85rem); color: rgba(0,240,255,0.5); margin-bottom: 2.5rem;
       letter-spacing: 6px; text-transform: uppercase;
     `;
     subtitle.textContent = '3D Football Game';
@@ -57,7 +59,7 @@ export class MainMenu {
     // Name input
     const inputContainer = document.createElement('div');
     inputContainer.style.cssText = `
-      display: flex; flex-direction: column; gap: 16px; align-items: center;
+      display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%;
     `;
 
     this.nameInput = document.createElement('input');
@@ -67,7 +69,7 @@ export class MainMenu {
     this.nameInput.style.cssText = `
       background: rgba(255,255,255,0.03); border: 1px solid rgba(0,240,255,0.15);
       color: #fff; padding: 12px 24px; font-size: 1rem; border-radius: 8px;
-      outline: none; width: 280px; text-align: center;
+      outline: none; width: min(280px, 85vw); text-align: center;
       transition: border-color 0.3s;
     `;
     this.nameInput.addEventListener('focus', () => {
@@ -87,9 +89,10 @@ export class MainMenu {
     this.playBtn.textContent = 'FIND MATCH';
     this.playBtn.style.cssText = `
       background: linear-gradient(135deg, #00f0ff, #8b5cf6);
-      color: #fff; border: none; padding: 14px 48px; font-size: 1.1rem;
+      color: #fff; border: none; padding: 14px 48px; font-size: clamp(1rem, 4vw, 1.1rem);
       font-weight: 700; border-radius: 8px; cursor: pointer;
       transition: all 0.3s; letter-spacing: 2px;
+      width: min(280px, 85vw);
     `;
     this.playBtn.addEventListener('mouseenter', () => {
       this.playBtn.style.transform = 'translateY(-2px)';
@@ -104,18 +107,25 @@ export class MainMenu {
     // Controls info
     const controls = document.createElement('div');
     controls.style.cssText = `
-      margin-top: 3rem; color: rgba(255,255,255,0.15); font-size: 0.7rem;
+      margin-top: 3rem; color: rgba(255,255,255,0.15); font-size: clamp(0.55rem, 2.5vw, 0.7rem);
       text-align: center; line-height: 2;
     `;
-    controls.innerHTML = `
-       W/Up - Run Forward &nbsp;|&nbsp; S/Down - Run Back<br>
-       A/Left - Strafe Left &nbsp;|&nbsp; D/Right - Strafe Right<br>
-       Space - Jump &nbsp;|&nbsp; Shift - Sprint &nbsp;|&nbsp; Click/E - Kick<br>
-       Mouse - Look Around &nbsp;|&nbsp; M - Mute
-       <br><br>
-       <a href="https://github.com/Rcciit1234" target="_blank" style="color:rgba(0,240,255,0.3);text-decoration:none;transition:color 0.3s;"
-          onmouseover="this.style.color='rgba(0,240,255,0.8)'" onmouseout="this.style.color='rgba(0,240,255,0.3)'">github.com/Rcciit1234</a>
-    `;
+    const controlsHTML = this.isMobile
+      ? `
+         Left Stick - Move &nbsp;|&nbsp; Right Drag - Look<br>
+         🦘 Jump &nbsp;|&nbsp; ⚡ Boost &nbsp;|&nbsp; ⚽ Kick
+         <br><br>
+         <a href="https://github.com/Rcciit1234" target="_blank" style="color:rgba(0,240,255,0.3);text-decoration:none;transition:color 0.3s;"
+            onmouseover="this.style.color='rgba(0,240,255,0.8)'" onmouseout="this.style.color='rgba(0,240,255,0.3)'">github.com/Rcciit1234</a>`
+      : `
+         W/Up - Run Forward &nbsp;|&nbsp; S/Down - Run Back<br>
+         A/Left - Strafe Left &nbsp;|&nbsp; D/Right - Strafe Right<br>
+         Space - Jump &nbsp;|&nbsp; Shift - Sprint &nbsp;|&nbsp; Click/E - Kick<br>
+         Mouse - Look Around &nbsp;|&nbsp; M - Mute
+         <br><br>
+         <a href="https://github.com/Rcciit1234" target="_blank" style="color:rgba(0,240,255,0.3);text-decoration:none;transition:color 0.3s;"
+            onmouseover="this.style.color='rgba(0,240,255,0.8)'" onmouseout="this.style.color='rgba(0,240,255,0.3)'">github.com/Rcciit1234</a>`;
+    controls.innerHTML = controlsHTML;
 
     // Status
     this.statusEl = document.createElement('div');

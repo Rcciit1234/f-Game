@@ -1,3 +1,5 @@
+import { TouchController } from './TouchController.js';
+
 export class InputManager {
   private keys: Set<string> = new Set();
   private mouseX = 0;
@@ -8,10 +10,19 @@ export class InputManager {
   private kickFlag = false;
 
   public camera = { yaw: 0, pitch: 0 };
+  public isMobile = false;
+  public touchController: TouchController | null = null;
 
   constructor() {
+    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.setupKeyboard();
-    this.setupPointerLock();
+    if (!this.isMobile) {
+      this.setupPointerLock();
+    }
+  }
+
+  setTouchController(tc: TouchController) {
+    this.touchController = tc;
   }
 
   private setupKeyboard() {
@@ -45,7 +56,9 @@ export class InputManager {
   }
 
   requestPointerLock() {
-    document.body.requestPointerLock();
+    if (!this.isMobile) {
+      document.body.requestPointerLock();
+    }
   }
 
   getRawInput() {
@@ -65,6 +78,20 @@ export class InputManager {
 
     const kick = this.kickFlag;
     this.kickFlag = false;
+
+    // On mobile, merge touch input (touch takes priority when active)
+    if (this.isMobile && this.touchController) {
+      const touch = this.touchController.getTouchState();
+      return {
+        steer: touch.steer !== 0 ? touch.steer : Math.max(-1, Math.min(1, steer)),
+        throttle: touch.throttle !== 0 ? touch.throttle : Math.max(-1, Math.min(1, throttle)),
+        jump: touch.jump || jump,
+        sprint: touch.sprint || sprint,
+        kick: touch.kick || kick,
+        camera: { yaw: touch.cameraYaw, pitch: touch.cameraPitch },
+        sequence: 0,
+      };
+    }
 
     return {
       steer: Math.max(-1, Math.min(1, steer)),

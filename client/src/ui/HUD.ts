@@ -16,25 +16,27 @@ export class HUD {
       font-family: 'Segoe UI', system-ui, sans-serif;
     `;
 
+    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
     // Scoreboard
     this.scoreEl = document.createElement('div');
     this.scoreEl.style.cssText = `
-      position: absolute; top: 20px; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: 20px;
-      background: rgba(0,0,0,0.6); padding: 8px 28px; border-radius: 10px;
+      position: absolute; top: ${isMobile ? '10px' : '20px'}; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: ${isMobile ? '12px' : '20px'};
+      background: rgba(0,0,0,0.6); padding: ${isMobile ? '4px 16px' : '8px 28px'}; border-radius: 10px;
       backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08);
     `;
     this.scoreEl.innerHTML = `
-      <div style="color:#00f0ff;font-size:1.8rem;font-weight:800;">0</div>
-      <div style="color:rgba(255,255,255,0.25);font-size:0.75rem;letter-spacing:1px;">VS</div>
-      <div style="color:#8b5cf6;font-size:1.8rem;font-weight:800;">0</div>
+      <div style="color:#00f0ff;font-size:${isMobile ? '1.2rem' : '1.8rem'};font-weight:800;">0</div>
+      <div style="color:rgba(255,255,255,0.25);font-size:${isMobile ? '0.6rem' : '0.75rem'};letter-spacing:1px;">VS</div>
+      <div style="color:#8b5cf6;font-size:${isMobile ? '1.2rem' : '1.8rem'};font-weight:800;">0</div>
     `;
 
     // Timer
     this.timerEl = document.createElement('div');
     this.timerEl.style.cssText = `
-      position: absolute; top: 75px; left: 50%; transform: translateX(-50%);
-      color: rgba(255,255,255,0.7); font-size: 1rem; font-weight: 600;
+      position: absolute; top: ${isMobile ? '50px' : '75px'}; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.7); font-size: ${isMobile ? '0.8rem' : '1rem'}; font-weight: 600;
       background: rgba(0,0,0,0.4); padding: 2px 14px; border-radius: 6px;
       font-variant-numeric: tabular-nums;
     `;

@@ -2,13 +2,16 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="mobile-web-app-capable" content="yes" />
   <title>6x6 3D Football Game</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     html, body { width: 100%; height: 100%; overflow: hidden; background: #05050a; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; }
+    body { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     #app { width: 100%; height: 100%; }
-    canvas { display: block; }
+    canvas { display: block; touch-action: none; }
     #loading-screen {
       position: fixed; inset: 0; z-index: 1000;
       background: linear-gradient(135deg, #05050a 0%, #0d0d2b 100%);

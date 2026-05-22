@@ -1,6 +1,7 @@
 import { SceneManager } from '../rendering/SceneManager.js';
 import { PhysicsWorld } from '../physics/PhysicsWorld.js';
 import { InputManager } from '../input/InputManager.js';
+import { TouchController } from '../input/TouchController.js';
 import { CameraController } from '../rendering/CameraController.js';
 import { NetworkManager } from './NetworkManager.js';
 import { GameState } from './GameState.js';
@@ -21,6 +22,7 @@ export class Game {
   private sceneManager!: SceneManager;
   private physics!: PhysicsWorld;
   private input!: InputManager;
+  private touchCtrl!: TouchController;
   private cameraCtrl!: CameraController;
   private network!: NetworkManager;
   private state!: GameState;
@@ -49,6 +51,8 @@ export class Game {
     this.sceneManager = new SceneManager();
     this.physics = new PhysicsWorld();
     this.input = new InputManager();
+    this.touchCtrl = new TouchController();
+    this.input.setTouchController(this.touchCtrl);
     this.state = new GameState();
     this.network = new NetworkManager();
     this.hud = new HUD();
@@ -58,6 +62,11 @@ export class Game {
     this.audio = new AudioManager();
     this.stadium = new Stadium(this.sceneManager.scene);
     this.cameraCtrl = new CameraController(this.sceneManager.camera);
+
+    this.touchCtrl.onMuteToggle = () => {
+      const muted = this.audio.toggleMute();
+      this.hud.showNotification(muted ? 'Audio OFF' : 'Audio ON');
+    };
 
     this.stadium.build();
 
@@ -97,6 +106,9 @@ export class Game {
       this.localPlayerId = this.network.socketId;
       this.state.matchId = data.matchId;
       this.menu.hide();
+      if (this.input.isMobile) {
+        this.touchCtrl.show();
+      }
       this.audio.startEngine();
       this.audio.startCrowdAmbient();
     };
@@ -136,6 +148,7 @@ export class Game {
       setTimeout(() => {
         this.menu.show();
         this.hud.hide();
+        this.touchCtrl.hide();
         this.audio.stopEngine();
         this.audio.stopCrowdAmbient();
       }, 5000);
