@@ -24,15 +24,15 @@ const io = new SocketIOServer(server, {
   pingTimeout: 2000,
 });
 
-// Serve the 3D game client build in production
+// Health endpoint (before static files so it's not intercepted)
+app.get('/health', (_req, res) => {
+  res.json({ status: 'ok', players: io.engine.clientsCount });
+});
+
+// Serve static files
 if (process.env.NODE_ENV === 'production') {
   app.use(express.static(path.join(__dirname, '..', '..', 'client', 'dist')));
-  // SPA fallback - serve index.html for all non-API routes
-  app.get('*', (_req, res) => {
-    res.sendFile(path.join(__dirname, '..', '..', 'client', 'dist', 'index.html'));
-  });
 } else {
-  // Serve the 2D game static files from the project root (dev only)
   app.use(express.static(path.join(__dirname, '..', '..')));
 }
 
@@ -108,10 +108,12 @@ io.on('connection', (socket) => {
   });
 });
 
-// Health endpoint
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', players: io.engine.clientsCount });
-});
+// SPA fallback (MUST be last - catches all non-API routes)
+if (process.env.NODE_ENV === 'production') {
+  app.use((_req, res) => {
+    res.sendFile(path.join(__dirname, '..', '..', 'client', 'dist', 'index.html'));
+  });
+}
 
 server.listen(PORT, () => {
   console.log(`[Server] 6x6 3D Football Game server running on port ${PORT}`);
