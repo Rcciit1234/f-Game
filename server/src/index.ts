@@ -115,7 +115,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-server.listen(PORT, '0.0.0.0', () => {
+server.listen(PORT, () => {
   console.log(`[Server] 6x6 3D Football Game server running on port ${PORT}`);
   console.log(`[Server] Waiting for players...`);
 });
