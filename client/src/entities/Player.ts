@@ -38,7 +38,7 @@ export class Player {
     this.playerName = playerName || (type === 'ai' ? 'AI' : 'Player');
     this.playerNumber = playerNumber || String(Math.floor(Math.random() * 99) + 1);
 
-    this.teamColor = team === Team.Blue ? 0x00f0ff : 0x8b5cf6;
+    this.teamColor = team === Team.Blue ? 0x00f0ff : 0xef4444;
 
     this.mesh = new THREE.Group();
 

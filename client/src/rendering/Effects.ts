@@ -60,7 +60,7 @@ export class Effects {
   }
 
   goalCelebration(team: Team) {
-    const color = team === Team.Blue ? 0x00f0ff : 0x8b5cf6;
+    const color = team === Team.Blue ? 0x00f0ff : 0xef4444;
 
     // Flash lights
     for (let i = 0; i < 8; i++) {

@@ -5,10 +5,11 @@ export class Minimap {
   private ctx: CanvasRenderingContext2D;
   private size: number;
   private isMobile: boolean;
+  private localPlayerId: string | null = null;
 
   constructor() {
     this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-    this.size = this.isMobile ? 100 : 160;
+    this.size = this.isMobile ? 120 : 160;
     this.canvas = document.createElement('canvas');
     this.canvas.width = this.size;
     this.canvas.height = this.size;
@@ -17,11 +18,15 @@ export class Minimap {
       background: rgba(0,0,0,0.6); backdrop-filter: blur(5px);
       border: 2px solid rgba(255,255,255,0.1);
       ${this.isMobile
-        ? 'top: 10px; right: 10px;'
+        ? 'bottom: 220px; right: 10px;'
         : 'bottom: 40px; left: 50%; transform: translateX(-50%);'}
     `;
     this.ctx = this.canvas.getContext('2d')!;
     document.body.appendChild(this.canvas);
+  }
+
+  setLocalPlayerId(id: string) {
+    this.localPlayerId = id;
   }
 
   update(players: Map<string, PlayerState>, ball: BallState | null) {
@@ -51,6 +56,11 @@ export class Minimap {
     ctx.arc(cx, cy, 15, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Goal markers
+    ctx.fillStyle = 'rgba(255,255,255,0.1)';
+    ctx.fillRect(cx - 6, 2, 12, 4);
+    ctx.fillRect(cx - 6, s - 6, 12, 4);
+
     // Draw ball
     if (ball) {
       const bx = cx + ball.position.x * scale;
@@ -65,23 +75,63 @@ export class Minimap {
     players.forEach((player) => {
       const px = cx + player.bike.position.x * scale;
       const py = cy + player.bike.position.z * scale;
-      const color = player.team === Team.Blue ? '#00f0ff' : '#8b5cf6';
-      const alpha = player.isAI ? '66' : 'ff';
+      const color = player.team === Team.Blue ? '#00f0ff' : '#ef4444';
+      const isLocal = player.id === this.localPlayerId;
+      const isAI = player.isAI;
+
+      let alpha: string;
+      let radius: number;
+      let shape: 'circle' | 'diamond' | 'triangle';
+
+      if (isLocal) {
+        alpha = 'ff';
+        radius = 4;
+        shape = 'triangle';
+      } else if (isAI) {
+        alpha = '66';
+        radius = 2;
+        shape = 'diamond';
+      } else {
+        alpha = 'cc';
+        radius = 3;
+        shape = 'circle';
+      }
 
       ctx.fillStyle = color + alpha;
-      ctx.beginPath();
-      ctx.arc(px, py, player.isAI ? 2 : 3, 0, Math.PI * 2);
-      ctx.fill();
 
-      // Direction indicator
-      const dirX = Math.sin(player.bike.rotation.y) * 4;
-      const dirZ = Math.cos(player.bike.rotation.y) * 4;
-      ctx.strokeStyle = color + alpha;
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(px, py);
-      ctx.lineTo(px + dirX, py + dirZ);
-      ctx.stroke();
+      if (shape === 'circle') {
+        ctx.beginPath();
+        ctx.arc(px, py, radius, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (shape === 'diamond') {
+        ctx.beginPath();
+        ctx.moveTo(px, py - radius);
+        ctx.lineTo(px + radius, py);
+        ctx.lineTo(px, py + radius);
+        ctx.lineTo(px - radius, py);
+        ctx.closePath();
+        ctx.fill();
+      } else if (shape === 'triangle') {
+        const angle = player.bike.rotation.y;
+        ctx.beginPath();
+        ctx.moveTo(px + Math.sin(angle) * radius * 1.5, py + Math.cos(angle) * radius * 1.5);
+        ctx.lineTo(px + Math.sin(angle + 2.4) * radius, py + Math.cos(angle + 2.4) * radius);
+        ctx.lineTo(px + Math.sin(angle - 2.4) * radius, py + Math.cos(angle - 2.4) * radius);
+        ctx.closePath();
+        ctx.fill();
+      }
+
+      // Direction indicator for non-AI human players
+      if (!isAI) {
+        const dirX = Math.sin(player.bike.rotation.y) * (radius + 2);
+        const dirZ = Math.cos(player.bike.rotation.y) * (radius + 2);
+        ctx.strokeStyle = color + alpha;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(px, py);
+        ctx.lineTo(px + dirX, py + dirZ);
+        ctx.stroke();
+      }
     });
   }
 }

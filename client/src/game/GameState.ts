@@ -6,7 +6,7 @@ export class GameState {
   public players: Map<string, PlayerState> = new Map();
   public ball: BallState = { position: { x: 0, y: 0.22, z: 0 }, velocity: { x: 0, y: 0, z: 0 }, lastTouchBy: null };
   public blueScore = 0;
-  public orangeScore = 0;
+  public redScore = 0;
   public elapsedSeconds = 0;
   public kickoffTimer = 0;
 
@@ -14,7 +14,7 @@ export class GameState {
     this.matchId = data.id || this.matchId;
     this.state = data.state ?? this.state;
     this.blueScore = data.blueScore ?? this.blueScore;
-    this.orangeScore = data.orangeScore ?? this.orangeScore;
+    this.redScore = data.redScore ?? this.redScore;
     this.elapsedSeconds = data.elapsedSeconds ?? this.elapsedSeconds;
     this.kickoffTimer = data.kickoffTimer ?? this.kickoffTimer;
 

@@ -2,7 +2,10 @@ export class MainMenu {
   private container: HTMLDivElement;
   private nameInput: HTMLInputElement;
   private playBtn: HTMLButtonElement;
+  private quickPlayBtn: HTMLButtonElement;
   private statusEl: HTMLDivElement;
+  private connDot: HTMLDivElement;
+  private queueCountEl: HTMLDivElement;
   private isMobile: boolean;
 
   public onPlay: ((name: string) => void) | null = null;
@@ -59,7 +62,7 @@ export class MainMenu {
     // Name input
     const inputContainer = document.createElement('div');
     inputContainer.style.cssText = `
-      display: flex; flex-direction: column; gap: 16px; align-items: center; width: 100%;
+      display: flex; flex-direction: column; gap: 12px; align-items: center; width: 100%;
     `;
 
     this.nameInput = document.createElement('input');
@@ -85,6 +88,7 @@ export class MainMenu {
     const names = ['Striker', 'Blaze', 'Phantom', 'Nitro', 'Vortex', 'Fury', 'Shadow', 'Thunder', 'Ace', 'Bolt'];
     this.nameInput.value = names[Math.floor(Math.random() * names.length)] + Math.floor(Math.random() * 100);
 
+    // Find Match button
     this.playBtn = document.createElement('button');
     this.playBtn.textContent = 'FIND MATCH';
     this.playBtn.style.cssText = `
@@ -104,16 +108,64 @@ export class MainMenu {
     });
     this.playBtn.addEventListener('click', () => this.play());
 
+    // Quick Play button
+    this.quickPlayBtn = document.createElement('button');
+    this.quickPlayBtn.textContent = '⚡ QUICK PLAY';
+    this.quickPlayBtn.style.cssText = `
+      background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08);
+      color: rgba(255,255,255,0.6); padding: 10px 24px; font-size: clamp(0.8rem, 3vw, 0.9rem);
+      font-weight: 600; border-radius: 8px; cursor: pointer;
+      transition: all 0.2s; letter-spacing: 1px;
+      width: min(280px, 85vw);
+    `;
+    this.quickPlayBtn.addEventListener('click', () => {
+      const name = this.nameInput.value.trim() || 'Player';
+      this.onPlay?.(name);
+      this.showConnecting();
+    });
+
+    // Status
+    this.statusEl = document.createElement('div');
+    this.statusEl.style.cssText = `
+      margin-top: 0.5rem; color: rgba(0,240,255,0.6); font-size: 0.85rem;
+    `;
+
+    // Connection + queue status row
+    const statusRow = document.createElement('div');
+    statusRow.style.cssText = `
+      display: flex; align-items: center; gap: 8px; margin-top: 1rem;
+      color: rgba(255,255,255,0.25); font-size: 0.7rem;
+    `;
+
+    this.connDot = document.createElement('div');
+    this.connDot.style.cssText = `
+      width: 6px; height: 6px; border-radius: 50%;
+      background: #eab308; transition: background 0.3s;
+    `;
+
+    const connLabel = document.createElement('span');
+    connLabel.textContent = 'Connecting...';
+
+    this.queueCountEl = document.createElement('div');
+    this.queueCountEl.style.cssText = `
+      margin-left: auto; color: rgba(255,255,255,0.2);
+    `;
+    this.queueCountEl.textContent = '';
+
+    statusRow.appendChild(this.connDot);
+    statusRow.appendChild(connLabel);
+    statusRow.appendChild(this.queueCountEl);
+
     // Controls info
     const controls = document.createElement('div');
     controls.style.cssText = `
-      margin-top: 3rem; color: rgba(255,255,255,0.15); font-size: clamp(0.55rem, 2.5vw, 0.7rem);
+      margin-top: 2rem; color: rgba(255,255,255,0.15); font-size: clamp(0.55rem, 2.5vw, 0.7rem);
       text-align: center; line-height: 2;
     `;
     const controlsHTML = this.isMobile
       ? `
          Left Stick - Move &nbsp;|&nbsp; Right Drag - Look<br>
-         🦘 Jump &nbsp;|&nbsp; ⚡ Boost &nbsp;|&nbsp; ⚽ Kick
+         Jump &nbsp;|&nbsp; Boost &nbsp;|&nbsp; Kick (hold to charge)
          <br><br>
          <a href="https://github.com/Rcciit1234" target="_blank" style="color:rgba(0,240,255,0.3);text-decoration:none;transition:color 0.3s;"
             onmouseover="this.style.color='rgba(0,240,255,0.8)'" onmouseout="this.style.color='rgba(0,240,255,0.3)'">github.com/Rcciit1234</a>`
@@ -127,15 +179,11 @@ export class MainMenu {
             onmouseover="this.style.color='rgba(0,240,255,0.8)'" onmouseout="this.style.color='rgba(0,240,255,0.3)'">github.com/Rcciit1234</a>`;
     controls.innerHTML = controlsHTML;
 
-    // Status
-    this.statusEl = document.createElement('div');
-    this.statusEl.style.cssText = `
-      margin-top: 1rem; color: rgba(0,240,255,0.6); font-size: 0.85rem;
-    `;
-
     inputContainer.appendChild(this.nameInput);
     inputContainer.appendChild(this.playBtn);
+    inputContainer.appendChild(this.quickPlayBtn);
     inputContainer.appendChild(this.statusEl);
+    inputContainer.appendChild(statusRow);
 
     this.container.appendChild(title);
     this.container.appendChild(subtitle);
@@ -148,12 +196,30 @@ export class MainMenu {
   private play() {
     const name = this.nameInput.value.trim() || 'Player';
     this.onPlay?.(name);
+    this.showConnecting();
+  }
+
+  setConnected(connected: boolean) {
+    this.connDot.style.background = connected ? '#22c55e' : '#ef4444';
+    this.connDot.style.boxShadow = connected
+      ? '0 0 6px rgba(34,197,94,0.4)'
+      : '0 0 6px rgba(239,68,68,0.4)';
+  }
+
+  setQueueCount(count: number) {
+    if (count > 0) {
+      this.queueCountEl.textContent = `${count} in queue`;
+    } else {
+      this.queueCountEl.textContent = '';
+    }
   }
 
   showConnecting() {
     this.playBtn.disabled = true;
     this.playBtn.textContent = 'SEARCHING...';
     this.playBtn.style.opacity = '0.6';
+    this.quickPlayBtn.disabled = true;
+    this.quickPlayBtn.style.opacity = '0.4';
     this.statusEl.textContent = 'Looking for players...';
 
     let dots = 0;
@@ -171,6 +237,8 @@ export class MainMenu {
     this.playBtn.disabled = false;
     this.playBtn.textContent = 'FIND MATCH';
     this.playBtn.style.opacity = '1';
+    this.quickPlayBtn.disabled = false;
+    this.quickPlayBtn.style.opacity = '1';
     this.statusEl.textContent = '';
 
     const interval = (this.container as any)._dotsInterval;

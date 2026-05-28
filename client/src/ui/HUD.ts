@@ -6,9 +6,16 @@ export class HUD {
   private goalNotificationEl: HTMLDivElement;
   private matchEndEl: HTMLDivElement;
   private notificationEl: HTMLDivElement;
+  private boostFill: HTMLDivElement;
+  private latencyDot: HTMLDivElement;
+  private pauseBtn: HTMLButtonElement;
   private notificationTimeout: number | null = null;
+  private isMobile: boolean;
+
+  public onPauseQuit: (() => void) | null = null;
 
   constructor() {
+    this.isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
     this.container = document.createElement('div');
     this.container.id = 'hud';
     this.container.style.cssText = `
@@ -16,31 +23,83 @@ export class HUD {
       font-family: 'Segoe UI', system-ui, sans-serif;
     `;
 
-    const isMobile = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-
     // Scoreboard
     this.scoreEl = document.createElement('div');
     this.scoreEl.style.cssText = `
-      position: absolute; top: ${isMobile ? '10px' : '20px'}; left: 50%; transform: translateX(-50%);
-      display: flex; align-items: center; gap: ${isMobile ? '12px' : '20px'};
-      background: rgba(0,0,0,0.6); padding: ${isMobile ? '4px 16px' : '8px 28px'}; border-radius: 10px;
+      position: absolute; top: ${this.isMobile ? '10px' : '20px'}; left: 50%; transform: translateX(-50%);
+      display: flex; align-items: center; gap: ${this.isMobile ? '12px' : '20px'};
+      background: rgba(0,0,0,0.6); padding: ${this.isMobile ? '4px 16px' : '8px 28px'}; border-radius: 10px;
       backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.08);
     `;
     this.scoreEl.innerHTML = `
-      <div style="color:#00f0ff;font-size:${isMobile ? '1.2rem' : '1.8rem'};font-weight:800;">0</div>
-      <div style="color:rgba(255,255,255,0.25);font-size:${isMobile ? '0.6rem' : '0.75rem'};letter-spacing:1px;">VS</div>
-      <div style="color:#8b5cf6;font-size:${isMobile ? '1.2rem' : '1.8rem'};font-weight:800;">0</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#00f0ff;"></div>
+        <div style="color:#00f0ff;font-size:${this.isMobile ? '1.2rem' : '1.8rem'};font-weight:800;">0</div>
+      </div>
+      <div style="color:rgba(255,255,255,0.25);font-size:${this.isMobile ? '0.6rem' : '0.75rem'};letter-spacing:1px;">VS</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="color:#ef4444;font-size:${this.isMobile ? '1.2rem' : '1.8rem'};font-weight:800;">0</div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
+      </div>
     `;
 
     // Timer
     this.timerEl = document.createElement('div');
     this.timerEl.style.cssText = `
-      position: absolute; top: ${isMobile ? '50px' : '75px'}; left: 50%; transform: translateX(-50%);
-      color: rgba(255,255,255,0.7); font-size: ${isMobile ? '0.8rem' : '1rem'}; font-weight: 600;
+      position: absolute; top: ${this.isMobile ? '50px' : '75px'}; left: 50%; transform: translateX(-50%);
+      color: rgba(255,255,255,0.7); font-size: ${this.isMobile ? '0.8rem' : '1rem'}; font-weight: 600;
       background: rgba(0,0,0,0.4); padding: 2px 14px; border-radius: 6px;
       font-variant-numeric: tabular-nums;
     `;
     this.timerEl.textContent = '5:00';
+
+    // Boost gauge
+    const boostContainer = document.createElement('div');
+    boostContainer.style.cssText = `
+      position: absolute; bottom: ${this.isMobile ? '180px' : '120px'}; left: ${this.isMobile ? '16px' : '30px'};
+      width: ${this.isMobile ? '100px' : '140px'}; height: 8px;
+      background: rgba(255,255,255,0.08); border-radius: 4px;
+      overflow: hidden; border: 1px solid rgba(255,200,0,0.2);
+    `;
+    this.boostFill = document.createElement('div');
+    this.boostFill.style.cssText = `
+      width: 100%; height: 100%;
+      background: linear-gradient(90deg, #f59e0b, #fbbf24, #10b981);
+      border-radius: 4px; transition: width 0.15s;
+    `;
+    boostContainer.appendChild(this.boostFill);
+
+    const boostLabel = document.createElement('div');
+    boostLabel.style.cssText = `
+      position: absolute; bottom: ${this.isMobile ? '192px' : '132px'}; left: ${this.isMobile ? '16px' : '30px'};
+      color: rgba(255,200,0,0.5); font-size: 0.55rem; letter-spacing: 1px;
+      text-transform: uppercase;
+    `;
+    boostLabel.textContent = 'Boost';
+
+    // Latency indicator
+    this.latencyDot = document.createElement('div');
+    this.latencyDot.style.cssText = `
+      position: absolute; top: ${this.isMobile ? '10px' : '15px'}; right: ${this.isMobile ? '10px' : '15px'};
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #22c55e; box-shadow: 0 0 6px rgba(34,197,94,0.4);
+      transition: background 0.3s;
+    `;
+
+    // Pause/quit button
+    this.pauseBtn = document.createElement('button');
+    this.pauseBtn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="6" y1="4" x2="6" y2="20"/><line x1="18" y1="4" x2="18" y2="20"/></svg>`;
+    this.pauseBtn.style.cssText = `
+      position: absolute; top: ${this.isMobile ? '8px' : '15px'}; left: ${this.isMobile ? '8px' : '15px'};
+      width: 44px; height: 44px; border-radius: 10px;
+      background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+      color: rgba(255,255,255,0.6); display: flex; align-items: center; justify-content: center;
+      pointer-events: auto; cursor: pointer; z-index: 102;
+      -webkit-tap-highlight-color: transparent; outline: none;
+    `;
+    this.pauseBtn.addEventListener('click', () => {
+      this.onPauseQuit?.();
+    });
 
     // Countdown overlay
     this.countdownEl = document.createElement('div');
@@ -55,20 +114,27 @@ export class HUD {
     this.goalNotificationEl = document.createElement('div');
     this.goalNotificationEl.style.cssText = `
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 3rem; font-weight: 900;
+      font-size: 4rem; font-weight: 900;
       text-shadow: 0 0 60px rgba(255,255,255,0.5);
       opacity: 0; transition: all 0.5s;
       text-align: center;
     `;
 
+    // Goal flash overlay
+    const flash = document.createElement('div');
+    flash.id = 'goal-flash';
+    flash.style.cssText = `
+      position: fixed; inset: 0; z-index: 99; pointer-events: none;
+      opacity: 0; transition: opacity 0.15s;
+    `;
+    document.body.appendChild(flash);
+
     // Match end
     this.matchEndEl = document.createElement('div');
     this.matchEndEl.style.cssText = `
       position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-      font-size: 3rem; font-weight: 900; color: #fff;
-      text-shadow: 0 0 40px rgba(255,255,255,0.3);
       opacity: 0; transition: opacity 0.5s;
-      text-align: center;
+      text-align: center; pointer-events: none;
     `;
 
     // Notification overlay
@@ -83,6 +149,10 @@ export class HUD {
 
     this.container.appendChild(this.scoreEl);
     this.container.appendChild(this.timerEl);
+    this.container.appendChild(boostContainer);
+    this.container.appendChild(boostLabel);
+    this.container.appendChild(this.latencyDot);
+    this.container.appendChild(this.pauseBtn);
     this.container.appendChild(this.countdownEl);
     this.container.appendChild(this.goalNotificationEl);
     this.container.appendChild(this.matchEndEl);
@@ -91,11 +161,17 @@ export class HUD {
     document.body.appendChild(this.container);
   }
 
-  updateScore(blue: number, orange: number) {
+  updateScore(blue: number, red: number) {
     this.scoreEl.innerHTML = `
-      <div style="color:#00f0ff;font-size:1.8rem;font-weight:800;">${blue}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="width:8px;height:8px;border-radius:50%;background:#00f0ff;"></div>
+        <div style="color:#00f0ff;font-size:1.8rem;font-weight:800;">${blue}</div>
+      </div>
       <div style="color:rgba(255,255,255,0.25);font-size:0.75rem;letter-spacing:1px;">VS</div>
-      <div style="color:#8b5cf6;font-size:1.8rem;font-weight:800;">${orange}</div>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <div style="color:#ef4444;font-size:1.8rem;font-weight:800;">${red}</div>
+        <div style="width:8px;height:8px;border-radius:50%;background:#ef4444;"></div>
+      </div>
     `;
   }
 
@@ -103,6 +179,20 @@ export class HUD {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
     this.timerEl.textContent = `${mins}:${secs.toString().padStart(2, '0')}`;
+  }
+
+  updateBoost(amount: number) {
+    const pct = Math.max(0, Math.min(100, amount));
+    this.boostFill.style.width = `${pct}%`;
+  }
+
+  updateLatency(ping: number) {
+    let color: string;
+    if (ping < 100) color = '#22c55e';
+    else if (ping < 200) color = '#eab308';
+    else color = '#ef4444';
+    this.latencyDot.style.background = color;
+    this.latencyDot.style.boxShadow = `0 0 6px ${color}66`;
   }
 
   showCountdown(time: number) {
@@ -128,14 +218,22 @@ export class HUD {
   }
 
   showGoalNotification(team: string, scorer: string | null) {
-    const color = team === 'blue' ? '#00f0ff' : '#8b5cf6';
-    const teamName = team === 'blue' ? 'CYAN' : 'PURPLE';
+    const color = team === 'blue' ? '#00f0ff' : '#ef4444';
+    const teamName = team === 'blue' ? 'BLUE' : 'RED';
     this.goalNotificationEl.innerHTML = `
       <div style="color:${color}">GOAL!</div>
-      <div style="font-size:1rem;color:#aaa;margin-top:10px">${teamName} TEAM</div>
+      <div style="font-size:1.2rem;color:#aaa;margin-top:10px">${teamName} TEAM</div>
     `;
     this.goalNotificationEl.style.opacity = '1';
     this.goalNotificationEl.style.transform = 'translate(-50%, -50%) scale(1.2)';
+
+    // Full-screen team color flash
+    const flash = document.getElementById('goal-flash');
+    if (flash) {
+      flash.style.background = color;
+      flash.style.opacity = '0.15';
+      setTimeout(() => { flash.style.opacity = '0'; }, 300);
+    }
 
     setTimeout(() => {
       this.goalNotificationEl.style.opacity = '0';
@@ -143,19 +241,19 @@ export class HUD {
     }, 2500);
   }
 
-  showMatchEnd(data: { blueScore: number; orangeScore: number; winner: string | null }) {
-    let msg = "MATCH OVER";
-    if (data.winner) {
-      const winnerName = data.winner === 'blue' ? 'CYAN' : 'PURPLE';
-      msg = `${winnerName} TEAM WINS!`;
-    } else {
-      msg = "DRAW!";
-    }
+  showMatchEnd(data: { blueScore: number; redScore: number; winner: string | null }) {
+    const winnerName = data.winner === 'blue' ? 'BLUE' : data.winner === 'red' ? 'RED' : null;
+    const msg = winnerName ? `${winnerName} TEAM WINS!` : "DRAW!";
+    const winnerColor = data.winner === 'blue' ? '#00f0ff' : data.winner === 'red' ? '#ef4444' : '#fff';
 
     this.matchEndEl.innerHTML = `
-      <div style="font-size:3rem">${msg}</div>
-      <div style="font-size:1.5rem;color:#aaa;margin-top:10px">
-        ${data.blueScore} - ${data.orangeScore}
+      <div style="background:rgba(0,0,0,0.75);backdrop-filter:blur(12px);border-radius:16px;padding:32px 48px;border:1px solid rgba(255,255,255,0.08);pointer-events:auto;">
+        <div style="color:${winnerColor};font-size:2.5rem;font-weight:900;margin-bottom:8px;">${msg}</div>
+        <div style="font-size:2rem;color:rgba(255,255,255,0.6);font-weight:700;font-variant-numeric:tabular-nums;">
+          <span style="color:#00f0ff;">${data.blueScore}</span>
+          <span style="color:rgba(255,255,255,0.25);margin:0 12px;">-</span>
+          <span style="color:#ef4444;">${data.redScore}</span>
+        </div>
       </div>
     `;
     this.matchEndEl.style.opacity = '1';

@@ -17,9 +17,13 @@ export class NetworkManager {
   public onPlayerLeft: ((data: any) => void) | null = null;
   public onError: ((data: any) => void) | null = null;
   public onChatMessage: ((data: any) => void) | null = null;
+  public onConnected: (() => void) | null = null;
+  public onDisconnected: (() => void) | null = null;
+  public onQueueUpdate: ((count: number) => void) | null = null;
 
   connect(playerName: string) {
-    this.socket = io({
+    const serverUrl = import.meta.env.VITE_SERVER_URL || undefined;
+    this.socket = io(serverUrl, {
       transports: ['websocket', 'polling'],
     });
 
@@ -27,10 +31,12 @@ export class NetworkManager {
       console.log('[Network] Connected:', this.socket?.id);
       this.socketId = this.socket?.id || '';
       this.socket?.emit(ClientEvent.JoinQueue, { name: playerName });
+      this.onConnected?.();
     });
 
     this.socket.on('disconnect', () => {
       console.log('[Network] Disconnected');
+      this.onDisconnected?.();
     });
 
     this.socket.on(ServerEvent.MatchFound, (data) => {
@@ -72,6 +78,15 @@ export class NetworkManager {
       console.error('[Network] Error:', data);
       this.onError?.(data);
     });
+
+    // Listen for queue size from server (if it emits this)
+    this.socket.on('queue_size' as any, (count: number) => {
+      this.onQueueUpdate?.(count);
+    });
+  }
+
+  getPing(): number {
+    return (this.socket as any)?.ping ?? 0;
   }
 
   sendInput(input: PlayerInput) {

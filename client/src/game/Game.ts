@@ -46,6 +46,7 @@ export class Game {
 
   private pendingCameras: string[] = [];
   private _wasKickoff = false;
+  private latencyInterval: number | null = null;
 
   async init() {
     this.sceneManager = new SceneManager();
@@ -63,20 +64,45 @@ export class Game {
     this.stadium = new Stadium(this.sceneManager.scene);
     this.cameraCtrl = new CameraController(this.sceneManager.camera);
 
+    // Wire haptics
+    if (this.input.isMobile) {
+      this.touchCtrl.onHaptic = () => {
+        try { navigator.vibrate?.(12); } catch {}
+      };
+    }
+
+    // Wire camera reset
+    this.touchCtrl.onCameraReset = () => {
+      this.cameraCtrl.snapBehind();
+    };
+
     this.touchCtrl.onMuteToggle = () => {
       const muted = this.audio.toggleMute();
       this.hud.showNotification(muted ? 'Audio OFF' : 'Audio ON');
     };
 
+    // Wire pause/quit
+    this.hud.onPauseQuit = () => {
+      this.network.disconnect();
+      this.cleanupMatch();
+      this.menu.show();
+    };
+
     this.stadium.build();
 
     const blueGoal = new Goal(this.sceneManager.scene, this.physics.world, Team.Blue);
-    const orangeGoal = new Goal(this.sceneManager.scene, this.physics.world, Team.Orange);
-    this.goals = [blueGoal, orangeGoal];
+    const redGoal = new Goal(this.sceneManager.scene, this.physics.world, Team.Red);
+    this.goals = [blueGoal, redGoal];
 
     this.ball = new Ball(this.sceneManager.scene, this.physics.world);
 
     this.setupEvents();
+
+    // Track latency
+    this.latencyInterval = window.setInterval(() => {
+      const ping = this.network.getPing?.() ?? 0;
+      this.hud.updateLatency(ping);
+    }, 2000);
 
     this.menu.show();
 
@@ -109,8 +135,10 @@ export class Game {
       if (this.input.isMobile) {
         this.touchCtrl.show();
       }
+      this.minimap.setLocalPlayerId(this.localPlayerId!);
       this.audio.startEngine();
       this.audio.startCrowdAmbient();
+      this.hud.show();
     };
 
     this.network.onStateUpdate = (data) => {
@@ -146,11 +174,8 @@ export class Game {
       this.audio.playMatchEnd();
       this.hud.showMatchEnd(data);
       setTimeout(() => {
+        this.cleanupMatch();
         this.menu.show();
-        this.hud.hide();
-        this.touchCtrl.hide();
-        this.audio.stopEngine();
-        this.audio.stopCrowdAmbient();
       }, 5000);
     };
 
@@ -172,6 +197,27 @@ export class Game {
       if (player) player.remove();
       this.players.delete(data.id);
     };
+
+    // Connection status
+    this.network.onConnected = () => {
+      this.menu.setConnected(true);
+    };
+    this.network.onDisconnected = () => {
+      this.menu.setConnected(false);
+    };
+    this.network.onQueueUpdate = (count: number) => {
+      this.menu.setQueueCount(count);
+    };
+  }
+
+  private cleanupMatch() {
+    this.audio.stopEngine();
+    this.audio.stopCrowdAmbient();
+    this.touchCtrl.hide();
+    this.hud.hide();
+    this.players.forEach((p) => p.remove());
+    this.players.clear();
+    this.localPlayerId = null;
   }
 
   private syncEntities() {
@@ -207,8 +253,16 @@ export class Game {
 
   private updateHUD() {
     const state = this.state;
-    this.hud.updateScore(state.blueScore, state.orangeScore);
+    this.hud.updateScore(state.blueScore, state.redScore);
     this.hud.updateTimer(state.elapsedSeconds);
+
+    // Update boost gauge
+    if (this.localPlayerId) {
+      const player = state.players.get(this.localPlayerId);
+      if (player) {
+        this.hud.updateBoost(player.bike.boost);
+      }
+    }
   }
 
   private updateAudio() {
@@ -235,6 +289,7 @@ export class Game {
       jump: rawInput.jump,
       sprint: rawInput.sprint,
       kick: rawInput.kick,
+      kickDirection: rawInput.kickDirection,
       camera: rawInput.camera,
       sequence: this.inputSequence,
     };
@@ -266,6 +321,9 @@ export class Game {
     this.isRunning = false;
     if (this.animFrameId !== null) {
       cancelAnimationFrame(this.animFrameId);
+    }
+    if (this.latencyInterval !== null) {
+      clearInterval(this.latencyInterval);
     }
     this.network.disconnect();
     this.audio.dispose();

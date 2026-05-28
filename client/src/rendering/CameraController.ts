@@ -34,6 +34,11 @@ export class CameraController {
     this.target = target;
   }
 
+  snapBehind() {
+    this.yaw = this.autoYaw;
+    this.pitch = this.autoPitch;
+  }
+
   update(dt: number, cameraInput?: { yaw: number; pitch: number }) {
     if (!this.target) return;
 
@@ -42,8 +47,9 @@ export class CameraController {
       this.pitch = Math.max(-1.0, Math.min(0.8, cameraInput.pitch));
     } else if (this.isMobile) {
       // Auto-follow: slowly drift camera to behind the player
-      this.yaw += (this.autoYaw - this.yaw) * Math.min(1, 2 * dt);
-      this.pitch += (this.autoPitch - this.pitch) * Math.min(1, 2 * dt);
+      const followSpeed = this.isMobile ? 4 * dt : 2 * dt;
+      this.yaw += (this.autoYaw - this.yaw) * Math.min(1, followSpeed);
+      this.pitch += (this.autoPitch - this.pitch) * Math.min(1, followSpeed);
     }
 
     const targetPos = new THREE.Vector3();

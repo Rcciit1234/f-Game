@@ -88,6 +88,7 @@ export class InputManager {
         jump: touch.jump || jump,
         sprint: touch.sprint || sprint,
         kick: touch.kick || kick,
+        kickDirection: touch.kick ? touch.kickDirection : undefined,
         camera: { yaw: touch.cameraYaw, pitch: touch.cameraPitch },
         sequence: 0,
       };

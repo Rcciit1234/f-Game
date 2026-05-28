@@ -1,7 +1,7 @@
 // ─── Team & Player ───
 export enum Team {
   Blue = 'blue',
-  Orange = 'orange',
+  Red = 'red',
 }
 
 export interface PlayerState {
@@ -37,6 +37,7 @@ export interface PlayerInput {
   jump: boolean;
   sprint: boolean;
   kick: boolean;
+  kickDirection?: { x: number; z: number };
   camera: { yaw: number; pitch: number };
   sequence: number;
 }
@@ -63,7 +64,7 @@ export interface MatchInfo {
   state: MatchState;
   config: MatchConfig;
   blueScore: number;
-  orangeScore: number;
+  redScore: number;
   elapsedSeconds: number;
   players: Map<string, PlayerState>;
   ball: BallState;

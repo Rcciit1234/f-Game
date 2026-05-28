@@ -8,12 +8,27 @@
     "dev:server": "npx tsx watch server/src/index.ts",
     "dev": "concurrently -n server,client -c cyan,yellow \"npm run dev:server\" \"npm run dev:client\"",
     "build": "cd client && npx vite build",
+    "build:capacitor": "CAPACITOR=true cd client && npx vite build",
     "start": "npx tsx server/src/index.ts",
     "start:prod": "NODE_ENV=production npx tsx server/src/index.ts",
-    "typecheck": "cd client && npx tsc --noEmit && cd ../server && npx tsc --noEmit"
+    "typecheck": "cd client && npx tsc --noEmit && cd ../server && npx tsc --noEmit",
+    "cap:init": "npx cap init \"6x6 Football\" com.football.sixsix",
+    "cap:add:android": "npx cap add android",
+    "cap:sync": "npx cap sync",
+    "cap:copy": "npx cap copy",
+    "cap:open:android": "npx cap open android",
+    "cap:build:android": "npm run build:capacitor && npx cap sync && cd android && ./gradlew assembleDebug"
   },
   "devDependencies": {
+    "@capacitor/android": "^7.0.0",
+    "@capacitor/cli": "^7.0.0",
+    "@capacitor/core": "^7.0.0",
+    "@capacitor/haptics": "^7.0.0",
+    "@capacitor/keyboard": "^7.0.0",
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/status-bar": "^7.0.0",
     "concurrently": "^9.2.1",
-    "tsx": "^4.19.0"
+    "tsx": "^4.19.0",
+    "typescript": "^6.0.3"
   }
 }

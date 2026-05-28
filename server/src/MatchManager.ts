@@ -19,7 +19,7 @@ interface Match {
   players: Map<string, PlayerState>;
   ball: BallState;
   blueScore: number;
-  orangeScore: number;
+  redScore: number;
   elapsedSeconds: number;
   kickoffTimer: number;
   lastInputs: Map<string, PlayerInput>;
@@ -140,7 +140,7 @@ export class MatchManager {
       state: match.state,
       config: match.config,
       blueScore: match.blueScore,
-      orangeScore: match.orangeScore,
+      redScore: match.redScore,
       elapsedSeconds: match.elapsedSeconds,
       players: match.players,
       ball: match.ball,
@@ -168,7 +168,7 @@ export class MatchManager {
         lastTouchBy: null,
       },
       blueScore: 0,
-      orangeScore: 0,
+      redScore: 0,
       elapsedSeconds: 0,
       kickoffTimer: 3,
       lastInputs: new Map(),
@@ -190,7 +190,7 @@ export class MatchManager {
 
       if (i < queuePlayers.length) {
         const qp = queuePlayers[i];
-        playerState = this.createPlayerState(qp.socket.id, qp.name, isBlue ? Team.Blue : Team.Orange, false, teamCounts);
+        playerState = this.createPlayerState(qp.socket.id, qp.name, isBlue ? Team.Blue : Team.Red, false, teamCounts);
 
         // Join socket room
         qp.socket.join(matchId);
@@ -200,7 +200,7 @@ export class MatchManager {
         // AI player
         const aiId = `ai_${matchId}_${i}`;
         const aiName = `AI_${i + 1}`;
-        playerState = this.createPlayerState(aiId, aiName, isBlue ? Team.Blue : Team.Orange, true, teamCounts);
+        playerState = this.createPlayerState(aiId, aiName, isBlue ? Team.Blue : Team.Red, true, teamCounts);
         playerIds.push(aiId);
       }
 
@@ -274,7 +274,7 @@ export class MatchManager {
 
   private resetPositions(match: Match) {
     let blueIdx = 0;
-    let orangeIdx = 0;
+    let redIdx = 0;
 
     match.players.forEach((player) => {
       if (player.team === Team.Blue) {
@@ -286,13 +286,13 @@ export class MatchManager {
         player.bike.boost = BIKE.BOOST_MAX;
         blueIdx++;
       } else {
-        const pos = this.getFormationPosition(Team.Orange, orangeIdx);
+        const pos = this.getFormationPosition(Team.Red, redIdx);
         player.bike.position = { ...pos };
         player.bike.rotation = { x: 0, y: Math.PI, z: 0 };
         player.bike.velocity = { x: 0, y: 0, z: 0 };
         player.bike.angularVelocity = { x: 0, y: 0, z: 0 };
         player.bike.boost = BIKE.BOOST_MAX;
-        orangeIdx++;
+        redIdx++;
       }
     });
 
@@ -385,7 +385,7 @@ export class MatchManager {
 
     if (inGoalX && inGoalZ && inGoalY) {
       // GOAL!
-      const scoringTeam = ball.position.x > 0 ? Team.Orange : Team.Blue;
+      const scoringTeam = ball.position.x > 0 ? Team.Red : Team.Blue;
       this.handleGoal(match, scoringTeam);
       return;
     }
@@ -416,7 +416,7 @@ export class MatchManager {
     if (scoringTeam === Team.Blue) {
       match.blueScore++;
     } else {
-      match.orangeScore++;
+      match.redScore++;
     }
 
     match.state = MatchState.GoalScored;
@@ -425,12 +425,12 @@ export class MatchManager {
     this.io.to(match.id).emit(ServerEvent.GoalScored, {
       team: scoringTeam,
       blueScore: match.blueScore,
-      orangeScore: match.orangeScore,
+      redScore: match.redScore,
       scorer: match.ball.lastTouchBy,
     });
 
     // Check match end
-    if (match.config.maxGoals && (match.blueScore >= match.config.maxGoals || match.orangeScore >= match.config.maxGoals)) {
+    if (match.config.maxGoals && (match.blueScore >= match.config.maxGoals || match.redScore >= match.config.maxGoals)) {
       setTimeout(() => this.endMatch(match), 3000);
     } else {
       setTimeout(() => {
@@ -450,9 +450,9 @@ export class MatchManager {
 
     this.io.to(match.id).emit(ServerEvent.MatchEnd, {
       blueScore: match.blueScore,
-      orangeScore: match.orangeScore,
-      winner: match.blueScore > match.orangeScore ? Team.Blue :
-              match.orangeScore > match.blueScore ? Team.Orange : null,
+      redScore: match.redScore,
+      winner: match.blueScore > match.redScore ? Team.Blue :
+              match.redScore > match.blueScore ? Team.Red : null,
     });
 
     // Cleanup after 10 seconds
@@ -567,11 +567,28 @@ export class MatchManager {
         const dist = Math.sqrt(dx * dx + dz * dz);
 
         if (dist < 3.0 && dist > 0) {
-          const kickForce = 35;
-          const isBlue = player.team === Team.Blue;
-          const dir = isBlue ? 1 : -1;
-          const forwardX = Math.sin(bike.rotation.y) * dir;
-          const forwardZ = Math.cos(bike.rotation.y) * dir;
+          let kickForce = 35;
+          let forwardX: number;
+          let forwardZ: number;
+
+          if (input.kickDirection) {
+            // Mobile: kick in joystick direction
+            const kd = input.kickDirection;
+            const kMag = Math.sqrt(kd.x * kd.x + kd.z * kd.z);
+            if (kMag > 0.01) {
+              forwardX = kd.x / kMag;
+              forwardZ = kd.z / kMag;
+            } else {
+              forwardX = 0;
+              forwardZ = 1;
+            }
+          } else {
+            // Desktop: kick in player facing direction
+            const isBlue = player.team === Team.Blue;
+            const dir = isBlue ? 1 : -1;
+            forwardX = Math.sin(bike.rotation.y) * dir;
+            forwardZ = Math.cos(bike.rotation.y) * dir;
+          }
 
           match.ball.velocity.x = forwardX * kickForce;
           match.ball.velocity.z = forwardZ * kickForce;
@@ -635,7 +652,7 @@ export class MatchManager {
       players: playersObj,
       ball: match.ball,
       blueScore: match.blueScore,
-      orangeScore: match.orangeScore,
+      redScore: match.redScore,
       elapsedSeconds: match.elapsedSeconds,
       kickoffTimer: match.kickoffTimer,
     });
