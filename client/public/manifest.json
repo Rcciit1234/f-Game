@@ -1,6 +1,6 @@
 {
-  "name": "6x6 3D Football Game",
-  "short_name": "6x6 Football",
+  "name": "6x6 Football Game",
+  "short_name": "6x6 Football Game",
   "description": "Multiplayer 6v6 3D football game",
   "start_url": "/",
   "display": "fullscreen",

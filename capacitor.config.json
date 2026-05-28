@@ -1,0 +1,28 @@
+{
+  "appId": "com.football.sixsix",
+  "appName": "6x6 Football Game",
+  "webDir": "client/dist",
+  "server": {
+    "androidScheme": "https",
+    "cleartext": true
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "backgroundColor": "#05050a",
+      "showSpinner": false,
+      "androidScaleType": "CENTER_CROP"
+    },
+    "StatusBar": {
+      "style": "DARK",
+      "backgroundColor": "#05050a"
+    },
+    "Keyboard": {
+      "resize": "body",
+      "style": "DARK"
+    }
+  },
+  "android": {
+    "allowMixedContent": true
+  }
+}
