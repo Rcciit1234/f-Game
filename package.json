@@ -8,7 +8,7 @@
     "dev:server": "npx tsx watch server/src/index.ts",
     "dev": "concurrently -n server,client -c cyan,yellow \"npm run dev:server\" \"npm run dev:client\"",
     "build": "cd client && npx vite build",
-    "build:capacitor": "CAPACITOR=true cd client && npx vite build",
+    "build:capacitor": "cd client && CAPACITOR=true npx vite build",
     "start": "npx tsx server/src/index.ts",
     "start:prod": "NODE_ENV=production npx tsx server/src/index.ts",
     "typecheck": "cd client && npx tsc --noEmit && cd ../server && npx tsc --noEmit",
