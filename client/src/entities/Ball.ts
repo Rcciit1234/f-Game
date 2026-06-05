@@ -9,17 +9,18 @@ export class Ball {
   private scene: THREE.Scene;
   private world: CANNON.World;
   private spinSpeed = new THREE.Vector3();
+  private spinAxis = new THREE.Vector3();
 
   constructor(scene: THREE.Scene, world: CANNON.World) {
     this.scene = scene;
     this.world = world;
 
     const tex = this.createSoccerTexture();
-    const geo = new THREE.SphereGeometry(BALL.RADIUS, 24, 24);
+    const geo = new THREE.SphereGeometry(BALL.RADIUS, 32, 32);
     const mat = new THREE.MeshStandardMaterial({
       map: tex,
-      roughness: 0.35,
-      metalness: 0.05,
+      roughness: 0.3,
+      metalness: 0.02,
     });
     this.mesh = new THREE.Mesh(geo, mat);
     this.mesh.castShadow = true;
@@ -33,8 +34,8 @@ export class Ball {
       material: new CANNON.Material('ball'),
     });
     this.body.position.set(0, BALL.RADIUS, 0);
-    this.body.linearDamping = 0.1;
-    this.body.angularDamping = 0.3;
+    this.body.linearDamping = 0.05;
+    this.body.angularDamping = 0.2;
     this.world.addBody(this.body);
   }
 
@@ -45,15 +46,11 @@ export class Ball {
     canvas.height = size;
     const ctx = canvas.getContext('2d')!;
 
-    // Background — white
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(0, 0, size, size);
 
-    // Pentagon pattern (classic soccer ball)
     const pentagons = [
-      // Centered pentagon
       { x: 256, y: 256, r: 50 },
-      // Surrounding pentagons
       { x: 100, y: 180, r: 35 },
       { x: 412, y: 180, r: 35 },
       { x: 160, y: 380, r: 35 },
@@ -64,7 +61,6 @@ export class Ball {
       { x: 312, y: 110, r: 30 },
       { x: 100, y: 460, r: 30 },
       { x: 412, y: 460, r: 30 },
-      // Edge pentagons
       { x: 50, y: 90, r: 25 },
       { x: 462, y: 90, r: 25 },
       { x: 256, y: 50, r: 25 },
@@ -73,7 +69,6 @@ export class Ball {
       { x: 256, y: 462, r: 25 },
     ];
 
-    // Draw connecting lines first
     ctx.strokeStyle = '#cccccc';
     ctx.lineWidth = 2;
     for (let i = 0; i < pentagons.length; i++) {
@@ -90,18 +85,15 @@ export class Ball {
       }
     }
 
-    // Draw pentagons (black)
     ctx.fillStyle = '#222222';
     pentagons.forEach((p) => {
       this.drawPentagon(ctx, p.x, p.y, p.r);
     });
 
-    // Base pattern dots (adidas-like)
     ctx.fillStyle = '#dddddd';
     for (let i = 0; i < 40; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      // Don't draw on pentagons
       let inPentagon = false;
       for (const p of pentagons) {
         const dx = x - p.x;
@@ -139,14 +131,26 @@ export class Ball {
   }
 
   sync(state: BallState) {
-    // Calculate spin from velocity
     const speed = Math.sqrt(state.velocity.x ** 2 + state.velocity.z ** 2);
-    this.spinSpeed.x = state.velocity.z * 0.5;
-    this.spinSpeed.z = -state.velocity.x * 0.5;
+
+    this.spinAxis.x = state.spin.x;
+    this.spinAxis.y = state.spin.y;
+    this.spinAxis.z = state.spin.z;
+    const spinMag = this.spinAxis.length();
+
+    if (spinMag > 0.001) {
+      this.spinAxis.normalize();
+      this.mesh.rotateOnWorldAxis(this.spinAxis, spinMag * 0.05);
+    }
+
+    if (speed > 1) {
+      this.spinSpeed.x = state.velocity.z * 0.5;
+      this.spinSpeed.z = -state.velocity.x * 0.5;
+      this.mesh.rotation.x += this.spinSpeed.x * 0.02;
+      this.mesh.rotation.z += this.spinSpeed.z * 0.02;
+    }
 
     this.mesh.position.set(state.position.x, state.position.y, state.position.z);
-    this.mesh.rotation.x += this.spinSpeed.x * 0.02;
-    this.mesh.rotation.z += this.spinSpeed.z * 0.02;
 
     this.body.position.set(state.position.x, state.position.y, state.position.z);
     this.body.velocity.set(state.velocity.x, state.velocity.y, state.velocity.z);

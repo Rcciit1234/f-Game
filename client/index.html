@@ -7,47 +7,179 @@
   <meta name="mobile-web-app-capable" content="yes" />
   <link rel="manifest" href="/manifest.json" />
   <link rel="apple-touch-icon" href="/icon-192.svg" />
-  <title>6x6 Football Game</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&family=Rajdhani:wght@500;700;800;900&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <title>6x6 Football</title>
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
-    html, body { width: 100%; height: 100%; overflow: hidden; background: #05050a; font-family: 'Segoe UI', system-ui, sans-serif; color: #fff; }
+    html, body { 
+      width: 100%; height: 100%; overflow: hidden; 
+      background: #030408; 
+      font-family: 'Rajdhani', 'Segoe UI', system-ui, sans-serif; 
+      color: #fff; 
+    }
     body { touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none; }
     #app { width: 100%; height: 100%; }
     canvas { display: block; touch-action: none; }
+    
     #loading-screen {
       position: fixed; inset: 0; z-index: 1000;
-      background: linear-gradient(135deg, #05050a 0%, #0d0d2b 100%);
+      background: radial-gradient(circle at center, #0d111d 0%, #030408 100%);
       display: flex; flex-direction: column; align-items: center; justify-content: center;
+      transition: opacity 0.5s ease, transform 0.5s cubic-bezier(0.19, 1, 0.22, 1);
     }
+
+    /* Animated Grid Overlay */
+    #loading-screen::before {
+      content: '';
+      position: absolute; inset: 0;
+      background-image: 
+        linear-gradient(rgba(0, 240, 255, 0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 240, 255, 0.04) 1px, transparent 1px);
+      background-size: 50px 50px;
+      background-position: center;
+      transform: perspective(500px) rotateX(60deg) translateY(-30%) translateZ(0);
+      mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%);
+      -webkit-mask-image: radial-gradient(ellipse at center, rgba(0,0,0,1) 30%, rgba(0,0,0,0) 80%);
+      animation: gridScroll 12s linear infinite;
+      pointer-events: none;
+    }
+
+    @keyframes gridScroll {
+      0% { background-position: center 0px; }
+      100% { background-position: center 200px; }
+    }
+
+    #loading-screen .logo-container {
+      position: relative;
+      width: 140px; height: 140px;
+      margin-bottom: 1.5rem;
+      display: flex; align-items: center; justify-content: center;
+    }
+
+    #loading-screen .logo-svg {
+      width: 110px; height: 110px; z-index: 2;
+      filter: drop-shadow(0 0 35px rgba(220, 38, 38, 0.4));
+      animation: floatLogo 3.5s ease-in-out infinite;
+    }
+
+    /* Outer spinning tech orbit */
+    #loading-screen .logo-ring {
+      position: absolute;
+      width: 140px; height: 140px;
+      border: 2px dashed rgba(0, 240, 255, 0.35);
+      border-radius: 50%;
+      z-index: 1;
+      animation: spinRing 20s linear infinite;
+      box-shadow: 0 0 25px rgba(0, 240, 255, 0.1);
+    }
+
+    @keyframes floatLogo {
+      0%, 100% { transform: translateY(0); filter: drop-shadow(0 0 35px rgba(220, 38, 38, 0.4)); }
+      50% { transform: translateY(-8px); filter: drop-shadow(0 0 50px rgba(220, 38, 38, 0.6)); }
+    }
+
+    @keyframes spinRing {
+      to { transform: rotate(360deg); }
+    }
+
     #loading-screen h1 {
-      font-size: 4.5rem; font-weight: 900;
-      background: linear-gradient(135deg, #00f0ff, #8b5cf6, #00f0ff);
+      font-size: 2.8rem; font-weight: 900; color: #fff;
+      font-family: 'Rajdhani', sans-serif;
+      letter-spacing: 2px; margin-bottom: 0.2rem; text-align: center;
+      background: linear-gradient(135deg, #ffffff 30%, #a5b4fc 100%);
       -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-      letter-spacing: -2px; margin-bottom: 0.5rem;
-      text-shadow: 0 0 60px rgba(0,240,255,0.3);
+      text-shadow: 0 0 40px rgba(0, 240, 255, 0.2);
     }
+
     #loading-screen .subtitle {
-      font-size: 1rem; color: #00f0ff; margin-bottom: 2rem;
-      letter-spacing: 4px; text-transform: uppercase; opacity: 0.7;
+      font-size: 0.85rem; color: #00f0ff; margin-bottom: 2.5rem;
+      letter-spacing: 5px; text-transform: uppercase; font-weight: 700;
+      text-shadow: 0 0 10px rgba(0, 240, 255, 0.4);
     }
+
     .loader-bar {
-      width: 300px; height: 3px; background: rgba(255,255,255,0.05); border-radius: 2px; overflow: hidden;
+      width: 280px; height: 4px; background: rgba(255, 255, 255, 0.08); 
+      border-radius: 4px; overflow: hidden; position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.05);
     }
+
     .loader-bar-inner {
       width: 0%; height: 100%;
       background: linear-gradient(90deg, #00f0ff, #8b5cf6);
-      border-radius: 2px; animation: load 2s ease-in-out forwards;
+      border-radius: 4px; animation: load 2.5s cubic-bezier(0.2, 0.8, 0.2, 1) forwards;
+      position: relative;
     }
+
+    /* Scanner laser effect */
+    .loader-bar-inner::after {
+      content: '';
+      position: absolute; top: 0; right: 0; bottom: 0; width: 30px;
+      background: linear-gradient(90deg, transparent, #fff, transparent);
+      opacity: 0.65;
+    }
+
     @keyframes load { to { width: 100%; } }
-    #loading-screen .loading-text { margin-top: 1rem; color: rgba(255,255,255,0.3); font-size: 0.85rem; letter-spacing: 1px; }
+
+    #loading-screen .loading-text { 
+      margin-top: 1.2rem; color: rgba(255, 255, 255, 0.35); 
+      font-size: 0.8rem; letter-spacing: 2px; font-weight: 600;
+      text-transform: uppercase;
+    }
+
+    /* Tap to play button container */
+    .tap-to-play-btn {
+      display: inline-block;
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
+      border: 2px solid #00f0ff;
+      color: #00f0ff;
+      padding: 12px 36px;
+      font-size: 1.1rem;
+      font-weight: 800;
+      letter-spacing: 3px;
+      border-radius: 30px;
+      cursor: pointer;
+      text-transform: uppercase;
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.3), inset 0 0 10px rgba(0, 240, 255, 0.2);
+      animation: pulseStart 1.8s ease-in-out infinite;
+      transition: all 0.2s;
+    }
+
+    .tap-to-play-btn:hover {
+      background: linear-gradient(135deg, rgba(0, 240, 255, 0.3) 0%, rgba(139, 92, 246, 0.3) 100%);
+      box-shadow: 0 0 35px rgba(0, 240, 255, 0.6);
+      transform: scale(1.04);
+    }
+
+    @keyframes pulseStart {
+      0%, 100% { opacity: 0.85; box-shadow: 0 0 20px rgba(0, 240, 255, 0.3); }
+      50% { opacity: 1; box-shadow: 0 0 35px rgba(0, 240, 255, 0.6), 0 0 10px rgba(139, 92, 246, 0.4); }
+    }
   </style>
 </head>
 <body>
   <div id="loading-screen">
-    <h1>6x6 FOOTBALL GAME</h1>
-    <div class="subtitle">Multiplayer 3D Football</div>
+    <div class="logo-container">
+      <div class="logo-ring"></div>
+      <div class="logo-svg">
+        <svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+          <ellipse cx="100" cy="100" rx="70" ry="80" fill="white"/>
+          <polygon points="100,50 128,72 118,106 82,106 72,72" fill="#dc2626" stroke="#dc2626" stroke-width="2.5"/>
+          <line x1="100" y1="50" x2="100" y2="12" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+          <line x1="128" y1="72" x2="160" y2="56" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+          <line x1="118" y1="106" x2="148" y2="140" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+          <line x1="82" y1="106" x2="52" y2="140" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+          <line x1="72" y1="72" x2="40" y2="56" stroke="#dc2626" stroke-width="3" stroke-linecap="round"/>
+          <ellipse cx="100" cy="100" rx="68" ry="78" fill="none" stroke="#dc2626" stroke-width="2"/>
+        </svg>
+      </div>
+    </div>
+    <h1>6x6 FOOTBALL</h1>
+    <div class="subtitle">Online Arena</div>
     <div class="loader-bar"><div class="loader-bar-inner"></div></div>
-    <div class="loading-text">LOADING STADIUM...</div>
+    <div class="loading-text">LOADING STADIUM LOBBY...</div>
   </div>
   <div id="app"></div>
   <script type="module" src="/src/main.ts"></script>

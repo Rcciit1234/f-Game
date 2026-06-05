@@ -4,6 +4,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { Server as SocketIOServer } from 'socket.io';
 import cors from 'cors';
+import { ClientEvent, ServerEvent } from '../../shared/index.js';
 import { MatchManager } from './MatchManager.js';
 import { RoomManager } from './RoomManager.js';
 
@@ -37,7 +38,7 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 const matchManager = new MatchManager(io);
-const roomManager = new RoomManager(io);
+const roomManager = new RoomManager(io, matchManager);
 
 io.on('connection', (socket) => {
   console.log(`[Server] Player connected: ${socket.id}`);
@@ -55,11 +56,11 @@ io.on('connection', (socket) => {
   });
 
   socket.on('player_input', (input) => {
-    matchManager.handleInput(socket.id, input);
+    matchManager.handlePlayerInput(socket.id, input);
   });
 
   socket.on('ready', () => {
-    matchManager.handleReady(socket.id);
+    // No ready state needed - match auto-starts
   });
 
   socket.on('request_match_info', () => {
@@ -70,35 +71,41 @@ io.on('connection', (socket) => {
     matchManager.handleChat(socket.id, msg);
   });
 
-  // ─── 2D Game Room System ───
-  socket.on('room_create', (data: { name: string }) => {
-    const code = roomManager.createRoom(socket, data.name || playerName);
-    socket.emit('room_created', { code });
+  socket.on('switch_player', (data: { playerId: string }) => {
+    matchManager.switchPlayer(socket.id, data.playerId);
   });
 
-  socket.on('room_join', (data: { code: string; name: string }) => {
+  // ─── Room System ───
+  socket.on(ClientEvent.CreateRoom, (data: { name: string }) => {
+    const result = roomManager.createRoom(socket, data.name || playerName);
+    socket.emit(ServerEvent.RoomCreated, result);
+  });
+
+  socket.on(ClientEvent.JoinRoom, (data: { code: string; name: string }) => {
     const result = roomManager.joinRoom(socket, data.code, data.name || playerName);
     if (result.success) {
-      socket.emit('room_joined', result.room);
+      socket.emit(ServerEvent.RoomJoined, result.room);
     } else {
-      socket.emit('room_error', { message: result.error });
+      socket.emit(ServerEvent.RoomError, { message: result.error });
     }
   });
 
-  socket.on('room_leave', () => {
+  socket.on(ClientEvent.LeaveRoom, () => {
     roomManager.leaveRoom(socket);
   });
 
-  socket.on('room_start_game', () => {
+  socket.on(ClientEvent.StartRoomGame, () => {
     roomManager.handleStartGame(socket);
   });
 
-  socket.on('room_input', (data) => {
-    roomManager.relayInput(socket, data);
+  // ─── Practice Mode ───
+  socket.on(ClientEvent.StartPractice, (data: { team: 'blue' | 'red'; name?: string }) => {
+    if (data?.name) playerName = data.name;
+    matchManager.createPracticeMatch(socket, data.team || 'blue');
   });
 
-  socket.on('room_game_state', (data) => {
-    roomManager.relayGameState(socket, data);
+  socket.on(ClientEvent.SetTeamMode, (data: { mode: string }) => {
+    matchManager.handleTeamMode(socket.id, data.mode as any);
   });
 
   socket.on('disconnect', () => {

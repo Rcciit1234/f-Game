@@ -73,8 +73,8 @@ export class Minimap {
 
     // Draw players
     players.forEach((player) => {
-      const px = cx + player.bike.position.x * scale;
-      const py = cy + player.bike.position.z * scale;
+      const px = cx + player.physics.position.x * scale;
+      const py = cy + player.physics.position.z * scale;
       const color = player.team === Team.Blue ? '#00f0ff' : '#ef4444';
       const isLocal = player.id === this.localPlayerId;
       const isAI = player.isAI;
@@ -112,7 +112,7 @@ export class Minimap {
         ctx.closePath();
         ctx.fill();
       } else if (shape === 'triangle') {
-        const angle = player.bike.rotation.y;
+        const angle = player.physics.rotation.y;
         ctx.beginPath();
         ctx.moveTo(px + Math.sin(angle) * radius * 1.5, py + Math.cos(angle) * radius * 1.5);
         ctx.lineTo(px + Math.sin(angle + 2.4) * radius, py + Math.cos(angle + 2.4) * radius);
@@ -123,8 +123,8 @@ export class Minimap {
 
       // Direction indicator for non-AI human players
       if (!isAI) {
-        const dirX = Math.sin(player.bike.rotation.y) * (radius + 2);
-        const dirZ = Math.cos(player.bike.rotation.y) * (radius + 2);
+        const dirX = Math.sin(player.physics.rotation.y) * (radius + 2);
+        const dirZ = Math.cos(player.physics.rotation.y) * (radius + 2);
         ctx.strokeStyle = color + alpha;
         ctx.lineWidth = 1.5;
         ctx.beginPath();

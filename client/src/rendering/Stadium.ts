@@ -1,9 +1,12 @@
 import * as THREE from 'three';
+import { FieldColor } from '../../../shared/index.js';
 
 export class Stadium {
   private scene: THREE.Scene;
   private fieldGroup: THREE.Group;
   private stadiumGroup: THREE.Group;
+  private grassMesh: THREE.Mesh | null = null;
+  private fieldColor: FieldColor = FieldColor.Green;
 
   constructor(scene: THREE.Scene) {
     this.scene = scene;
@@ -13,7 +16,6 @@ export class Stadium {
 
   build() {
     this.createField();
-    this.createWalls();
     this.createStadiumStructure();
     this.createLighting();
     this.createCrowd();
@@ -37,6 +39,7 @@ export class Stadium {
     grass.rotation.x = -Math.PI / 2;
     grass.position.y = 0.01;
     grass.receiveShadow = true;
+    this.grassMesh = grass;
     this.fieldGroup.add(grass);
 
     // Stripe overlay
@@ -141,8 +144,6 @@ export class Stadium {
       }
     }
 
-    // Boost pads
-    this.createBoostPads();
   }
 
   private createGoal(xSign: number) {
@@ -201,115 +202,6 @@ export class Stadium {
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(gw * 0.7, gh * 0.7), glowMat);
     glow.position.set(xPos - xSign * gd * 0.5, gh / 2, 0);
     this.fieldGroup.add(glow);
-  }
-
-  private createBoostPads() {
-    const padMat = new THREE.MeshStandardMaterial({
-      color: 0xffd700, emissive: 0xff8800, emissiveIntensity: 0.4,
-      roughness: 0.3, metalness: 0.1,
-    });
-    const glowMat = new THREE.MeshBasicMaterial({
-      color: 0xff6600, transparent: true, opacity: 0.12,
-    });
-    const ringMat = new THREE.MeshBasicMaterial({
-      color: 0xffd700, transparent: true, opacity: 0.25, side: THREE.DoubleSide,
-    });
-
-    const positions = [
-      { x: 0, z: 0 }, { x: 0, z: -20 }, { x: 0, z: 20 },
-      { x: -15, z: -25 }, { x: -15, z: 25 }, { x: 15, z: -25 }, { x: 15, z: 25 },
-      { x: -30, z: -15 }, { x: -30, z: 15 }, { x: 30, z: -15 }, { x: 30, z: 15 },
-      { x: -42, z: -10 }, { x: -42, z: 10 }, { x: 42, z: -10 }, { x: 42, z: 10 },
-      { x: -25, z: -30 }, { x: -25, z: 30 }, { x: 25, z: -30 }, { x: 25, z: 30 },
-    ];
-
-    for (const p of positions) {
-      const pad = new THREE.Mesh(new THREE.CylinderGeometry(1.1, 1.1, 0.05, 16), padMat);
-      pad.position.set(p.x, 0.03, p.z);
-      pad.receiveShadow = true;
-      this.fieldGroup.add(pad);
-
-      const ring = new THREE.Mesh(new THREE.RingGeometry(1.3, 1.7, 24), ringMat);
-      ring.rotation.x = -Math.PI / 2;
-      ring.position.set(p.x, 0.04, p.z);
-      this.fieldGroup.add(ring);
-
-      const glow = new THREE.Mesh(new THREE.CircleGeometry(0.7, 16), glowMat);
-      glow.rotation.x = -Math.PI / 2;
-      glow.position.set(p.x, 0.04, p.z);
-      this.fieldGroup.add(glow);
-
-      // Lightning bolt icon
-      const boltMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.4 });
-      for (const dir of ['h', 'v']) {
-        const bolt = new THREE.Mesh(
-          new THREE.BoxGeometry(dir === 'h' ? 0.25 : 0.05, 0.02, dir === 'h' ? 0.05 : 0.25),
-          boltMat
-        );
-        bolt.position.set(p.x, 0.06, p.z);
-        this.fieldGroup.add(bolt);
-      }
-    }
-  }
-
-  private createWalls() {
-    const HL = 50, HW = 34, WH = 5;
-    const wallMat = new THREE.MeshStandardMaterial({
-      color: 0x1a2a4a, roughness: 0.6, metalness: 0.3, transparent: true, opacity: 0.7,
-    });
-
-    // Side walls (glass-like)
-    for (const z of [-HW, HW]) {
-      const w = new THREE.Mesh(new THREE.BoxGeometry(HL * 2, WH, 0.15), wallMat);
-      w.position.set(0, WH / 2, z);
-      w.receiveShadow = true;
-      this.fieldGroup.add(w);
-    }
-
-    // Back walls with goal gaps
-    const goalHalf = 3.66;
-    for (const x of [-HL, HL]) {
-      for (const zSign of [-1, 1]) {
-        const segW = HW - goalHalf;
-        const w = new THREE.Mesh(new THREE.BoxGeometry(0.15, WH, segW), wallMat);
-        w.position.set(x, WH / 2, zSign * (goalHalf + segW / 2));
-        w.receiveShadow = true;
-        this.fieldGroup.add(w);
-      }
-      const top = new THREE.Mesh(new THREE.BoxGeometry(0.15, WH - 2.44, goalHalf * 2), wallMat);
-      top.position.set(x, WH - (WH - 2.44) / 2, 0);
-      this.fieldGroup.add(top);
-    }
-
-    // Perimeter advertising boards
-    const adMat = new THREE.MeshStandardMaterial({
-      color: 0x0d1b2a, roughness: 0.4, metalness: 0.7,
-    });
-    // Create LED-like ad boards around the field
-    const adColors = [0x2255cc, 0xcc3322, 0x22aa44, 0xffaa00, 0x8822cc, 0x00aaaa];
-    for (let i = 0; i < 24; i++) {
-      const angle = (i / 24) * Math.PI * 2;
-      const radius = 36;
-      const x = Math.cos(angle) * 50 * 0.9;
-      const z = Math.sin(angle) * 34 * 0.9;
-      // Only place on straight sections
-      if (Math.abs(x) < 45 && Math.abs(z) < 30) {
-        const board = new THREE.Mesh(
-          new THREE.BoxGeometry(2.5, 1.2, 0.08),
-          new THREE.MeshStandardMaterial({
-            color: adColors[i % adColors.length],
-            roughness: 0.3, metalness: 0.6, transparent: true, opacity: 0.6,
-          })
-        );
-        board.position.set(
-          Math.max(-48, Math.min(48, x)),
-          0.7,
-          Math.max(-32, Math.min(32, z))
-        );
-        board.lookAt(0, 0.7, 0);
-        this.fieldGroup.add(board);
-      }
-    }
   }
 
   private createStadiumStructure() {
@@ -463,6 +355,18 @@ export class Stadium {
 
     const hemi = new THREE.HemisphereLight(0x87ceeb, 0x3a7d44, 0.4);
     this.scene.add(hemi);
+  }
+
+  setFieldColor(mode: FieldColor) {
+    this.fieldColor = mode;
+    if (!this.grassMesh) return;
+    const colors: Record<FieldColor, number> = {
+      [FieldColor.Green]: 0x2d8a4e,
+      [FieldColor.Clay]: 0xc4583a,
+      [FieldColor.Dark]: 0x1a3a2a,
+    };
+    const mat = this.grassMesh.material as THREE.MeshStandardMaterial;
+    mat.color.setHex(colors[mode]);
   }
 
   private createCrowd() {

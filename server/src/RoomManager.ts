@@ -1,4 +1,6 @@
 import { Server as SocketIOServer, Socket } from 'socket.io';
+import { ServerEvent, RoomInfo } from '../../shared/index.js';
+import { MatchManager } from './MatchManager.js';
 
 interface RoomPlayer {
   id: string;
@@ -15,12 +17,14 @@ export class RoomManager {
   private rooms: Map<string, Room> = new Map();
   private socketToRoom: Map<string, string> = new Map();
   private io: SocketIOServer;
+  private matchManager: MatchManager;
 
-  constructor(io: SocketIOServer) {
+  constructor(io: SocketIOServer, matchManager: MatchManager) {
     this.io = io;
+    this.matchManager = matchManager;
   }
 
-  createRoom(socket: Socket, name: string): string {
+  createRoom(socket: Socket, name: string): RoomInfo {
     const code = this.generateCode();
     const room: Room = {
       code,
@@ -31,10 +35,14 @@ export class RoomManager {
     this.socketToRoom.set(socket.id, code);
     socket.join(`room:${code}`);
     console.log(`[Room] ${name} (${socket.id}) created room ${code}`);
-    return code;
+    return {
+      code,
+      players: room.players.map(p => ({ id: p.id, name: p.name })),
+      hostId: socket.id,
+    };
   }
 
-  joinRoom(socket: Socket, code: string, name: string): { success: boolean; error?: string; room?: { code: string; players: { id: string; name: string }[] } } {
+  joinRoom(socket: Socket, code: string, name: string): { success: boolean; error?: string; room?: { code: string; players: { id: string; name: string }[]; hostId: string } } {
     const codeUpper = code.toUpperCase();
     const room = this.rooms.get(codeUpper);
     if (!room) return { success: false, error: 'Room not found' };
@@ -47,8 +55,9 @@ export class RoomManager {
 
     console.log(`[Room] ${name} (${socket.id}) joined room ${codeUpper}`);
 
-    this.io.to(`room:${codeUpper}`).emit('room_player_joined', {
-      players: room.players.map(p => ({ id: p.id, name: p.name })),
+    this.io.to(`room:${codeUpper}`).emit(ServerEvent.RoomPlayerJoined, {
+      id: socket.id,
+      name,
     });
 
     return {
@@ -56,6 +65,7 @@ export class RoomManager {
       room: {
         code: codeUpper,
         players: room.players.map(p => ({ id: p.id, name: p.name })),
+        hostId: room.players[0].id,
       },
     };
   }
@@ -69,6 +79,7 @@ export class RoomManager {
       return;
     }
 
+    const player = room.players.find(p => p.id === socket.id);
     room.players = room.players.filter(p => p.id !== socket.id);
     this.socketToRoom.delete(socket.id);
     socket.leave(`room:${code}`);
@@ -77,8 +88,9 @@ export class RoomManager {
       this.rooms.delete(code);
       console.log(`[Room] Room ${code} deleted (empty)`);
     } else {
-      this.io.to(`room:${code}`).emit('room_player_left', {
-        players: room.players.map(p => ({ id: p.id, name: p.name })),
+      this.io.to(`room:${code}`).emit(ServerEvent.RoomPlayerLeft, {
+        id: socket.id,
+        name: player?.name || 'unknown',
       });
     }
   }
@@ -88,31 +100,56 @@ export class RoomManager {
     if (!code) return false;
     const room = this.rooms.get(code);
     if (!room) return false;
-    if (room.players.length < 2) return false;
+    if (room.players.length < 2) {
+      socket.emit(ServerEvent.RoomError, { message: 'Need at least 2 players to start' });
+      return false;
+    }
     if (room.players[0].id !== socket.id) {
-      socket.emit('room_error', { message: 'Only the host can start the game' });
+      socket.emit(ServerEvent.RoomError, { message: 'Only the host can start the game' });
       return false;
     }
 
     room.gameStarted = true;
-    this.io.to(`room:${code}`).emit('room_game_start', {
-      players: room.players.map(p => ({ id: p.id, name: p.name })),
-      hostId: room.players[0].id,
+
+    // Create a 6v6 match: host on Blue, guest on Red
+    const hostId = room.players[0].id;
+    const guestId = room.players[1].id;
+    const hostName = room.players[0].name;
+    const guestName = room.players[1].name;
+
+    const sockets: Map<string, Socket> = new Map();
+    const ns = this.io.sockets;
+    ns.sockets.forEach((sock) => {
+      if (sock.id === hostId) sockets.set(hostId, sock);
+      if (sock.id === guestId) sockets.set(guestId, sock);
     });
-    console.log(`[Room] Game started in room ${code}`);
+
+    const matchId = this.matchManager.createMatchFromRoom(hostId, guestId, hostName, guestName);
+
+    if (matchId) {
+      sockets.forEach((sock) => {
+        sock?.join(matchId);
+      });
+      this.matchManager.addPlayerToMatch(hostId, matchId);
+      this.matchManager.addPlayerToMatch(guestId, matchId);
+
+      console.log(`[Room] 3D Game started in room ${code}, match: ${matchId}`);
+
+      this.io.to(`room:${code}`).emit(ServerEvent.RoomGameStart, {
+        matchId,
+        players: room.players.map(p => ({ id: p.id, name: p.name })),
+        hostId: room.players[0].id,
+      });
+
+      // Clean up room after starting
+      setTimeout(() => {
+        this.rooms.delete(code);
+        room.players.forEach(p => this.socketToRoom.delete(p.id));
+      }, 5000);
+    } else {
+      socket.emit(ServerEvent.RoomError, { message: 'Failed to create match' });
+    }
     return true;
-  }
-
-  relayInput(socket: Socket, data: any): void {
-    const code = this.socketToRoom.get(socket.id);
-    if (!code) return;
-    socket.to(`room:${code}`).emit('room_opponent_input', data);
-  }
-
-  relayGameState(socket: Socket, data: any): void {
-    const code = this.socketToRoom.get(socket.id);
-    if (!code) return;
-    socket.to(`room:${code}`).emit('room_game_state', data);
   }
 
   removePlayer(socketId: string): void {
@@ -121,14 +158,16 @@ export class RoomManager {
     const room = this.rooms.get(code);
     if (!room) return;
 
+    const player = room.players.find(p => p.id === socketId);
     room.players = room.players.filter(p => p.id !== socketId);
     this.socketToRoom.delete(socketId);
 
     if (room.players.length === 0) {
       this.rooms.delete(code);
     } else {
-      this.io.to(`room:${code}`).emit('room_player_left', {
-        players: room.players.map(p => ({ id: p.id, name: p.name })),
+      this.io.to(`room:${code}`).emit(ServerEvent.RoomPlayerLeft, {
+        id: socketId,
+        name: player?.name || 'unknown',
       });
     }
   }

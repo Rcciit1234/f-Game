@@ -8,6 +8,7 @@ export class InputManager {
   private _cameraPitch = 0;
   private _kickPressed = false;
   private kickFlag = false;
+  private switchFlag = false;
 
   public camera = { yaw: 0, pitch: 0 };
   public isMobile = false;
@@ -61,6 +62,14 @@ export class InputManager {
     }
   }
 
+  consumeSwitchRequest(): boolean {
+    if (this.switchFlag) {
+      this.switchFlag = false;
+      return true;
+    }
+    return false;
+  }
+
   getRawInput() {
     const steer = (this.keys.has('a') || this.keys.has('arrowleft') ? -1 : 0) +
       (this.keys.has('d') || this.keys.has('arrowright') ? 1 : 0);
@@ -68,7 +77,6 @@ export class InputManager {
     const throttle = (this.keys.has('w') || this.keys.has('arrowup') ? 1 : 0) +
       (this.keys.has('s') || this.keys.has('arrowdown') ? -1 : 0);
 
-    const jump = this.keys.has(' ') || this.keys.has('space');
     const sprint = this.keys.has('shift');
 
     this.camera = {
@@ -80,15 +88,23 @@ export class InputManager {
     this.kickFlag = false;
 
     // On mobile, merge touch input (touch takes priority when active)
-    if (this.isMobile && this.touchController) {
+    if (this.isMobile && this.touchController && this.touchController.visible) {
       const touch = this.touchController.getTouchState();
+
+      if (touch.switchPlayer) {
+        this.switchFlag = true;
+      }
+
       return {
         steer: touch.steer !== 0 ? touch.steer : Math.max(-1, Math.min(1, steer)),
         throttle: touch.throttle !== 0 ? touch.throttle : Math.max(-1, Math.min(1, throttle)),
-        jump: touch.jump || jump,
         sprint: touch.sprint || sprint,
         kick: touch.kick || kick,
         kickDirection: touch.kick ? touch.kickDirection : undefined,
+        pass: touch.pass,
+        throughPass: touch.throughPass,
+        tackle: touch.tackle,
+        switchPlayer: touch.switchPlayer,
         camera: { yaw: touch.cameraYaw, pitch: touch.cameraPitch },
         sequence: 0,
       };
@@ -97,9 +113,11 @@ export class InputManager {
     return {
       steer: Math.max(-1, Math.min(1, steer)),
       throttle: Math.max(-1, Math.min(1, throttle)),
-      jump,
       sprint,
       kick,
+      kickDirection: undefined,
+      pass: undefined,
+      defence: undefined,
       camera: this.camera,
       sequence: 0,
     };
