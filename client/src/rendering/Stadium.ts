@@ -362,8 +362,7 @@ export class Stadium {
     if (!this.grassMesh) return;
     const colors: Record<FieldColor, number> = {
       [FieldColor.Green]: 0x2d8a4e,
-      [FieldColor.Clay]: 0xc4583a,
-      [FieldColor.Dark]: 0x1a3a2a,
+      [FieldColor.Black]: 0x0a0a0a,
     };
     const mat = this.grassMesh.material as THREE.MeshStandardMaterial;
     mat.color.setHex(colors[mode]);

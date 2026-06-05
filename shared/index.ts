@@ -5,8 +5,7 @@ export enum Team {
 
 export enum FieldColor {
   Green = 'green',
-  Clay = 'clay',
-  Dark = 'dark',
+  Black = 'black',
 }
 
 export enum MatchState {

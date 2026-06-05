@@ -426,8 +426,7 @@ export class DashboardScreen {
 
     const colors: { key: FieldColor; bg: string; label: string }[] = [
       { key: FieldColor.Green, bg: 'linear-gradient(135deg, #1a8a3a, #2a9a4a)', label: 'Green' },
-      { key: FieldColor.Clay, bg: 'linear-gradient(135deg, #c47a3a, #d48a4a)', label: 'Clay' },
-      { key: FieldColor.Dark, bg: 'linear-gradient(135deg, #1a1a2e, #2a2a3e)', label: 'Dark' },
+      { key: FieldColor.Black, bg: 'linear-gradient(135deg, #111111, #222222)', label: 'Black' },
     ];
 
     colors.forEach((c) => {
