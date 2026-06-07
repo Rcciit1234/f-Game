@@ -7,6 +7,8 @@ import cors from 'cors';
 import { ClientEvent, ServerEvent } from '../../shared/index.js';
 import { MatchManager } from './MatchManager.js';
 import { RoomManager } from './RoomManager.js';
+import { HBHeadBallMatchManager } from './headball/MatchManager.js';
+import { HBHeadBallRoomManager } from './headball/RoomManager.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -39,6 +41,8 @@ if (process.env.NODE_ENV === 'production') {
 
 const matchManager = new MatchManager(io);
 const roomManager = new RoomManager(io, matchManager);
+const hbMatchManager = new HBHeadBallMatchManager(io);
+const hbRoomManager = new HBHeadBallRoomManager(io, hbMatchManager);
 
 io.on('connection', (socket) => {
   console.log(`[Server] Player connected: ${socket.id}`);
@@ -108,10 +112,32 @@ io.on('connection', (socket) => {
     matchManager.handleTeamMode(socket.id, data.mode as any);
   });
 
+  // ─── Head Ball ───
+  socket.on('hb_create_room', (data: { name?: string }) => {
+    hbRoomManager.createRoom(socket, data?.name || playerName);
+  });
+
+  socket.on('hb_join_room', (data: { code: string; name?: string }) => {
+    hbRoomManager.joinRoom(socket, data.code, data?.name || playerName);
+  });
+
+  socket.on('hb_leave_room', () => {
+    hbRoomManager.leaveRoom(socket);
+  });
+
+  socket.on('hb_ready', () => {
+    hbRoomManager.handleReady(socket);
+  });
+
+  socket.on('hb_input', (input: any) => {
+    hbMatchManager.handleInput(socket.id, input);
+  });
+
   socket.on('disconnect', () => {
     console.log(`[Server] Player disconnected: ${socket.id}`);
     matchManager.removePlayer(socket.id);
     roomManager.removePlayer(socket.id);
+    hbRoomManager.removePlayer(socket.id);
   });
 });
 

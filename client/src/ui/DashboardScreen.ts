@@ -169,6 +169,7 @@ export class DashboardScreen {
   public onGuide: (() => void) | null = null;
   public onExit: (() => void) | null = null;
   public onColorChange: ((color: FieldColor) => void) | null = null;
+  public onHeadBall: (() => void) | null = null;
 
   constructor() {
     this.container = document.createElement('div');
@@ -380,8 +381,35 @@ export class DashboardScreen {
     practiceCard.appendChild(practiceHeader);
     practiceCard.appendChild(practiceActions);
 
+    // Card 3: Head Ball
+    const headBallCard = document.createElement('div');
+    headBallCard.className = 'dashboard-glass-card neon-border-green dash-card-anim';
+    headBallCard.style.cssText = `display: flex; flex-direction: column; justify-content: space-between; min-height: 200px;`;
+
+    const hbHeader = document.createElement('div');
+    hbHeader.style.cssText = `margin-bottom: 16px;`;
+    hbHeader.innerHTML = `
+      <div style="font-size: 0.75rem; font-weight: 800; color: #22c55e; letter-spacing: 2px; text-transform: uppercase;">ARCADE MODE</div>
+      <div style="font-size: 1.4rem; font-weight: 900; color: #fff; margin: 4px 0 2px; letter-spacing: 0.5px;">⚽ HEAD BALL</div>
+      <div style="font-size: 0.8rem; color: rgba(255,255,255,0.4); font-weight: 600;">1v1 big-head football. Quick 90s matches.</div>
+    `;
+
+    const hbActions = document.createElement('div');
+    hbActions.style.cssText = `display: flex; flex-direction: column; gap: 8px; margin-top: auto;`;
+
+    const hbPlayBtn = document.createElement('button');
+    hbPlayBtn.className = 'btn-mode-primary dash-touch-btn';
+    hbPlayBtn.style.cssText = `background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 4px 10px rgba(34,197,94,0.25);`;
+    hbPlayBtn.textContent = 'PLAY HEAD BALL';
+    hbPlayBtn.addEventListener('click', () => this.onHeadBall?.());
+
+    hbActions.appendChild(hbPlayBtn);
+    headBallCard.appendChild(hbHeader);
+    headBallCard.appendChild(hbActions);
+
     this.mainCards.appendChild(onlineCard);
     this.mainCards.appendChild(practiceCard);
+    this.mainCards.appendChild(headBallCard);
     this.container.appendChild(this.mainCards);
 
     // Bottom utilities row

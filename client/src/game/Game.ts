@@ -22,6 +22,7 @@ import { Minimap } from '../ui/Minimap.js';
 import { Effects } from '../rendering/Effects.js';
 import { AudioManager } from '../audio/AudioManager.js';
 import { PlayerSwitcher } from '../ui/PlayerSwitcher.js';
+import { startHeadBall } from '../headball/index.js';
 import {
   MatchState, Team, TeamMode, PlayerInput, FieldColor,
 } from '../../../shared/index.js';
@@ -264,6 +265,23 @@ export class Game {
 
     this.dashboardScreen.onColorChange = (color: FieldColor) => {
       this.stadium.setFieldColor(color);
+    };
+
+    this.dashboardScreen.onHeadBall = () => {
+      this.audio.playMenuClick();
+      this.dashboardScreen.hide();
+      document.getElementById('game-container')!.style.display = 'none';
+      const hbContainer = document.createElement('div');
+      hbContainer.id = 'headball-container';
+      hbContainer.style.cssText = 'position:fixed;inset:0;z-index:200;background:#0f172a';
+      document.body.appendChild(hbContainer);
+      const restore = () => {
+        const el = document.getElementById('headball-container');
+        if (el) el.remove();
+        document.getElementById('game-container')!.style.display = '';
+        this.dashboardScreen.show();
+      };
+      startHeadBall(hbContainer, restore);
     };
 
     this.dashboardScreen.onPractice = (team: 'blue' | 'red') => {
