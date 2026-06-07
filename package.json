@@ -1,5 +1,5 @@
 {
-  "name": "voltgoal",
+  "name": "fgame",
   "version": "1.0.0",
   "private": true,
   "type": "module",
@@ -12,7 +12,7 @@
     "start": "npx tsx server/src/index.ts",
     "start:prod": "NODE_ENV=production npx tsx server/src/index.ts",
     "typecheck": "cd client && npx tsc --noEmit && cd ../server && npx tsc --noEmit",
-    "cap:init": "npx cap init \"6x6 Football\" com.football.sixsix",
+    "cap:init": "npx cap init \"F Game\" com.fgame.app",
     "cap:add:android": "npx cap add android",
     "cap:sync": "npx cap sync",
     "cap:copy": "npx cap copy",

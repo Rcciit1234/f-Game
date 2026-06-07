@@ -31,51 +31,43 @@ export class GuideScreen {
     `;
     title.textContent = 'HOW TO PLAY';
 
-    // Rules section
     const rulesTitle = this.createSectionTitle('Game Rules');
     const rules = this.createTextBlock(
-      '⚽ 6v6 Football Match — You control your player on the field. ' +
-      'Score more goals than your opponent to win! ' +
-      'First to 5 goals wins, or the team with the most goals after 5 minutes wins. ' +
-      'You can switch between your 6 teammates to control any player on your team.'
+      '⚽ 1v1 Head Ball — Score more goals than your opponent in 90 seconds!\n' +
+      'Kick the ball into the opponent\'s goal to score.\n' +
+      'Tap kick for a low shot, hold kick for a high lob.\n' +
+      'Jump to head the ball for extra power.\n' +
+      'First to 10 goals or most goals after 90s wins.'
     );
 
-    // Keyboard controls section
     const kbTitle = this.createSectionTitle('Keyboard Controls');
     const kbContent = this.isMobile ? document.createElement('div') : this.createControlsGrid([
-      ['W / Arrow Up', 'Move Forward'],
-      ['S / Arrow Down', 'Move Backward'],
-      ['A / Arrow Left', 'Strafe Left'],
-      ['D / Arrow Right', 'Strafe Right'],
-      ['Shift', 'Sprint'],
-      ['E / Left Click', 'Kick'],
-      ['Tab / Q', 'Switch Player'],
-      ['Mouse', 'Look Around'],
-      ['M', 'Mute Audio'],
+      ['A / Arrow Left', 'Move Left'],
+      ['D / Arrow Right', 'Move Right'],
+      ['W / Arrow Up', 'Jump'],
+      ['Space', 'Kick (tap=low, hold=high lob)'],
+      ['S / Arrow Down', 'Kick Hold (charge lob)'],
+      ['Escape', 'Exit match'],
     ]);
 
-    // Mobile controls section
     const mobileTitle = this.createSectionTitle('Mobile Controls');
     const mobileContent = this.createControlsGrid([
-      ['Left Joystick', 'Move your player'],
-      ['Right Drag', 'Look around'],
-      ['Sprint Button', 'Sprint (drains stamina)'],
-      ['Kick Button', 'Kick / Shoot'],
-      ['Pass Button', 'Ground pass'],
-      ['Tap Teammate', 'Switch to that player'],
+      ['◀ Left Button', 'Move Left'],
+      ['▶ Right Button', 'Move Right'],
+      ['↑ Jump Button', 'Jump'],
+      ['⚽ Kick Button', 'Kick (tap=low, hold=high lob)'],
     ]);
 
-    // Tips
     const tipsTitle = this.createSectionTitle('Tips');
     const tips = this.createTextBlock(
-      '💡 Use sprint wisely — it drains stamina, walk to recover.\n' +
-      '💡 Switch between teammates to defend and attack effectively.\n' +
-      '💡 Pass to open teammates to build up play.\n' +
-      '💡 Through balls can split defenses for fast attackers.'
+      '💡 Jump before kicking to head the ball for extra power.\n' +
+      '💡 Hold kick longer for a high lob over the goalkeeper.\n' +
+      '💡 Stay between the ball and your goal to defend.\n' +
+      '💡 Quick taps are harder for the opponent to predict.'
     );
 
     const backBtn = document.createElement('button');
-    backBtn.textContent = '← BACK TO DASHBOARD';
+    backBtn.textContent = '← BACK';
     backBtn.style.cssText = `
       background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1);
       color: rgba(255,255,255,0.6); padding: 12px 32px; margin-top: 20px;
@@ -122,7 +114,7 @@ export class GuideScreen {
 
   private createControlsGrid(controls: [string, string][]): HTMLDivElement {
     const container = document.createElement('div');
-    container.style.cssText = `display: flex; flex-direction: column; gap: 4px;`;
+    container.style.cssText = 'display: flex; flex-direction: column; gap: 4px;';
 
     controls.forEach(([key, action]) => {
       const row = document.createElement('div');
@@ -137,7 +129,7 @@ export class GuideScreen {
       `;
       keyEl.textContent = key;
       const actionEl = document.createElement('span');
-      actionEl.style.cssText = `color: rgba(255,255,255,0.5); font-size: 0.75rem;`;
+      actionEl.style.cssText = 'color: rgba(255,255,255,0.5); font-size: 0.75rem;';
       actionEl.textContent = action;
       row.appendChild(keyEl);
       row.appendChild(actionEl);

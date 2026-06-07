@@ -1,6 +1,6 @@
 {
-  "appId": "com.football.sixsix",
-  "appName": "6x6 Football Game",
+  "appId": "com.fgame.app",
+  "appName": "F Game",
   "webDir": "client/dist",
   "server": {
     "androidScheme": "https",

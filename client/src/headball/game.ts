@@ -1,8 +1,9 @@
-import { HBMatchState, HBInput, HBPlayerState, HBBallState, HB_FIELD, HB_MATCH } from '../../../shared/headball.js';
+import { HBMatchState, HBInput, HB_MATCH } from '../../../shared/headball.js';
 import { HBRenderer } from './renderer.js';
 import { HBControls } from './controls.js';
 import { HBMatch, getAIInput } from './match.js';
 import { createPlayer } from './player.js';
+import { HBHeadBallNetwork, HBOnlineStateData } from './network.js';
 
 type GameMode = 'local_ai' | 'online';
 
@@ -18,6 +19,10 @@ export class HBGame {
   private running = false;
   private onExit: () => void;
 
+  private network: HBHeadBallNetwork | null = null;
+  private onlineState: HBMatchState | null = null;
+  private exitTimer: ReturnType<typeof setTimeout> | null = null;
+
   constructor(container: HTMLElement, onExit: () => void) {
     this.container = container;
     this.renderer = new HBRenderer(container);
@@ -29,31 +34,98 @@ export class HBGame {
     this.mode = mode;
     this.running = true;
 
-    this.match = new HBMatch('player1', 'You', 'player2', 'AI');
-    this.match.setCallbacks(
-      (h, a) => {},
-      (s) => {
-        if (s === 'ended') {
-          setTimeout(() => this.cleanup(), 3000);
+    if (mode === 'local_ai') {
+      this.match = new HBMatch('player1', 'You', 'player2', 'AI');
+      this.match.setCallbacks(
+        () => {},
+        (s) => {
+          if (s === 'ended') {
+            this.exitTimer = setTimeout(() => this.cleanup(), 3000);
+          }
         }
-      }
-    );
+      );
+      this.controls.onInput((input) => {
+        this.localInput = { ...input };
+      });
+      this.match.start();
+      this.lastTime = performance.now();
+      this.loop(this.lastTime);
 
-    this.controls.onInput((input) => {
-      this.localInput = { ...input };
-    });
-
-    this.match.start();
-    this.lastTime = performance.now();
-    this.loop(this.lastTime);
-
-    if (this.mode === 'local_ai') {
       const escHandler = (e: KeyboardEvent) => {
         if (e.key === 'Escape') this.cleanup();
       };
       window.addEventListener('keydown', escHandler);
       (this as any)._escHandler = escHandler;
     }
+  }
+
+  startOnline(network: HBHeadBallNetwork) {
+    this.mode = 'online';
+    this.running = true;
+    this.network = network;
+
+    this.controls.onInput((input) => {
+      this.localInput = { ...input };
+    });
+
+    network.onStateUpdate = (data: HBOnlineStateData) => {
+      this.onlineState = this.buildState(data);
+    };
+
+    network.onCountdown = (time: number) => {
+      if (this.onlineState) {
+        this.onlineState.state = 'countdown';
+        this.onlineState.countdownTimer = time;
+      }
+    };
+
+    network.onGoal = (data) => {
+      if (this.onlineState) {
+        this.onlineState.homeScore = data.homeScore;
+        this.onlineState.awayScore = data.awayScore;
+        this.onlineState.state = 'goal_scored';
+      }
+      setTimeout(() => {
+        if (this.onlineState) {
+          this.onlineState.state = 'playing';
+        }
+      }, 2000);
+    };
+
+    network.onMatchEnd = () => {
+      if (this.onlineState) {
+        this.onlineState.state = 'ended';
+      }
+      this.exitTimer = setTimeout(() => this.cleanup(), 3000);
+    };
+
+    network.onDisconnected = () => {
+      this.cleanup();
+    };
+
+    this.lastTime = performance.now();
+    this.loopOnline(this.lastTime);
+
+    const escHandler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') this.cleanup();
+    };
+    window.addEventListener('keydown', escHandler);
+    (this as any)._escHandler = escHandler;
+  }
+
+  private buildState(data: HBOnlineStateData): HBMatchState {
+    return {
+      id: '',
+      state: data.state as HBMatchState['state'],
+      homePlayer: data.homePlayer,
+      awayPlayer: data.awayPlayer,
+      ball: data.ball,
+      homeScore: data.homeScore,
+      awayScore: data.awayScore,
+      elapsedSeconds: data.elapsedSeconds,
+      countdownTimer: data.countdownTimer,
+      matchDuration: HB_MATCH.DURATION,
+    };
   }
 
   private loop = (time: number) => {
@@ -67,7 +139,6 @@ export class HBGame {
         this.match.state.homePlayer,
         this.match.state.ball
       );
-
       this.match.update(dt, this.localInput, aiInput);
       this.renderer.render(this.match.state);
       this.renderer.drawTouchControls();
@@ -76,9 +147,26 @@ export class HBGame {
     this.animId = requestAnimationFrame(this.loop);
   };
 
+  private loopOnline = (time: number) => {
+    if (!this.running) return;
+    this.lastTime = time;
+
+    if (this.network) {
+      this.network.sendInput(this.localInput);
+    }
+
+    if (this.onlineState) {
+      this.renderer.render(this.onlineState);
+      this.renderer.drawTouchControls();
+    }
+
+    this.animId = requestAnimationFrame(this.loopOnline);
+  };
+
   private cleanup() {
     this.running = false;
     cancelAnimationFrame(this.animId);
+    if (this.exitTimer) clearTimeout(this.exitTimer);
     this.match?.destroy();
     this.controls.destroy();
     const handler = (this as any)._escHandler;

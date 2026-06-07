@@ -1,7 +1,7 @@
 {
-  "name": "6x6 Football Game",
-  "short_name": "6x6 Football Game",
-  "description": "Multiplayer 6v6 3D football game",
+  "name": "F Game",
+  "short_name": "F Game",
+  "description": "1v1 Big-Head Football — Play with friends online!",
   "start_url": "/",
   "display": "fullscreen",
   "orientation": "landscape",
