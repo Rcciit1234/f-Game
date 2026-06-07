@@ -12,7 +12,7 @@ COPY . .
 
 RUN cd client && npx vite build
 
-EXPOSE 8080
+EXPOSE 3001
 
 ENV NODE_ENV=production
 
