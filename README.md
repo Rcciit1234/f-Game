@@ -2,6 +2,10 @@
 
 **1v1 Big-Head Football** — A head-to-head football game where oversized characters battle it out on a 2D pitch. Play against AI or challenge friends online!
 
+## Play Now
+
+👉 **[f-game-production.up.railway.app](https://f-game-production.up.railway.app)**
+
 ## Features
 
 - **1v1 Big-Head Football** — Unique big-head characters with custom colors and expressions
