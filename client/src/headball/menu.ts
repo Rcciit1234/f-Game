@@ -28,8 +28,89 @@ export class HBMenu {
     this.onStartOnline = onStartOnline;
     this.onBack = onBack;
     this.network = network;
+    HBMenu.injectStyles();
     this.setupNetwork();
     this.buildMain();
+  }
+
+  private static injectStyles() {
+    if (document.getElementById('hb-anim-style')) return;
+    const style = document.createElement('style');
+    style.id = 'hb-anim-style';
+    style.textContent = `
+@keyframes hbGradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+@keyframes hbFloat {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes hbPulse {
+  0%, 100% { filter: drop-shadow(0 0 15px rgba(0,240,255,0.15)); }
+  50% { filter: drop-shadow(0 0 35px rgba(0,240,255,0.35)); }
+}
+@keyframes hbOrbDrift {
+  0% { transform: translate(0, 0); }
+  25% { transform: translate(30px, -20px); }
+  50% { transform: translate(-20px, -50px); }
+  75% { transform: translate(-40px, -10px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes hbOrbDrift2 {
+  0% { transform: translate(0, 0); }
+  33% { transform: translate(-30px, 30px); }
+  66% { transform: translate(20px, -20px); }
+  100% { transform: translate(0, 0); }
+}
+@keyframes hbGridScroll {
+  0% { transform: perspective(400px) rotateX(60deg) translateY(0); }
+  100% { transform: perspective(400px) rotateX(60deg) translateY(60px); }
+}
+@keyframes hbFadeIn {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes hbBtnGlow {
+  0%, 100% { box-shadow: 0 4px 15px rgba(37,99,235,0.2); }
+  50% { box-shadow: 0 4px 25px rgba(37,99,235,0.4); }
+}
+@keyframes hbCodePulse {
+  0%, 100% { border-color: rgba(0,240,255,0.15); }
+  50% { border-color: rgba(0,240,255,0.4); }
+}
+@keyframes hbWiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-3deg); }
+  75% { transform: rotate(3deg); }
+}
+@keyframes hbSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+.hb-btn-primary {
+  transition: all 0.25s ease !important;
+}
+.hb-btn-primary:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 6px 30px rgba(37,99,235,0.45) !important;
+}
+.hb-btn-primary:active {
+  transform: scale(0.96) !important;
+}
+.hb-btn-secondary {
+  transition: all 0.25s ease !important;
+}
+.hb-btn-secondary:hover {
+  color: rgba(255,255,255,0.7) !important;
+}
+.hb-code-input:focus {
+  border-color: rgba(0,240,255,0.5) !important;
+  box-shadow: 0 0 20px rgba(0,240,255,0.1) !important;
+}
+    `.trim();
+    document.head.appendChild(style);
   }
 
   private setupNetwork() {
@@ -82,23 +163,28 @@ export class HBMenu {
 
   private wrap(inner: string) {
     return `
-      <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;background:linear-gradient(135deg,#0f172a,#1e293b);color:#fff;font-family:sans-serif;gap:20px;padding:20px;box-sizing:border-box;">
-        ${inner}
+      <div style="position:relative;overflow:hidden;height:100%;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);background-size:200% 200%;animation:hbGradientShift 8s ease infinite;color:#fff;font-family:sans-serif;">
+        <div style="position:absolute;inset:0;opacity:0.15;background-image:linear-gradient(rgba(0,240,255,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.06) 1px,transparent 1px);background-size:60px 60px;animation:hbGridScroll 20s linear infinite;"></div>
+        <div style="position:absolute;width:450px;height:450px;border-radius:50%;background:radial-gradient(circle,rgba(0,240,255,0.06) 0%,transparent 70%);top:50%;left:15%;filter:blur(40px);animation:hbOrbDrift 12s ease-in-out infinite;"></div>
+        <div style="position:absolute;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.06) 0%,transparent 70%);top:20%;right:10%;filter:blur(40px);animation:hbOrbDrift2 15s ease-in-out infinite;"></div>
+        <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;box-sizing:border-box;animation:hbFadeIn 0.4s ease;">
+          ${inner}
+        </div>
       </div>
     `;
   }
 
   private btnStyle(primary = true) {
     return primary
-      ? 'padding:12px 24px;border:none;border-radius:10px;background:linear-gradient(135deg,#2563eb,#8b5cf6);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;width:100%;'
-      : 'padding:8px 16px;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,0.3);font-size:0.85rem;cursor:pointer;width:100%;';
+      ? 'class="hb-btn-primary" style="padding:12px 24px;border:none;border-radius:12px;background:linear-gradient(135deg,#2563eb,#8b5cf6);color:#fff;font-size:1rem;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent;width:100%;box-shadow:0 4px 15px rgba(37,99,235,0.2);animation:hbBtnGlow 3s ease-in-out infinite;'
+      : 'class="hb-btn-secondary" style="padding:8px 16px;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,0.4);font-size:0.85rem;cursor:pointer;width:100%;';
   }
 
   // ─── Main ───
   private buildMain() {
     this.container.innerHTML = this.wrap(`
-      <div style="font-size:3rem;margin-bottom:10px;">⚽</div>
-      <h1 style="font-size:1.8rem;margin:0;background:linear-gradient(90deg,#00f0ff,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;">HEAD BALL</h1>
+      <div style="font-size:3rem;margin-bottom:10px;animation:hbFloat 3s ease-in-out infinite;">⚽</div>
+      <h1 style="font-size:1.8rem;margin:0;background:linear-gradient(90deg,#00f0ff,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:hbPulse 2.5s ease-in-out infinite;">HEAD BALL</h1>
       <p style="color:rgba(255,255,255,0.4);font-size:0.85rem;margin:0;">1v1 Big-Head Football</p>
       <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px;width:220px;">
         <button id="hb-ai-btn" style="${this.btnStyle(true)}">Play vs AI</button>
@@ -245,5 +331,7 @@ export class HBMenu {
 
   destroy() {
     this.container.innerHTML = '';
+    const style = document.getElementById('hb-anim-style');
+    if (style) style.remove();
   }
 }
