@@ -15,15 +15,32 @@ const COLORS = {
   roof: 'rgba(15,52,96,0.15)',
 };
 
+interface TrailPoint { x: number; y: number; }
+interface Particle { x: number; y: number; vx: number; vy: number; life: number; maxLife: number; color: string; size: number; }
+interface Confetti { x: number; y: number; vx: number; vy: number; color: string; rot: number; rv: number; size: number; }
+interface RainDrop { x: number; y: number; speed: number; length: number; alpha: number; }
+
 export class HBRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
   private scale = 1;
   private lastTime = 0;
+  private dt = 0.016;
   private time = 0;
   private lastState = '';
   private stateEntryTime = 0;
   private stars: {x: number; y: number; baseAlpha: number; phase: number; speed: number}[] = [];
+  private trail: TrailPoint[] = [];
+  private particles: Particle[] = [];
+  private confetti: Confetti[] = [];
+  private confettiSpawned = false;
+  private prevKickingHome = false;
+  private prevKickingAway = false;
+  private kickSparkTime = 0;
+  private kickSparkX = 0;
+  private kickSparkY = 0;
+  private goalParticlesSpawned = false;
+  private rain: RainDrop[] = [];
 
   constructor(container: HTMLElement) {
     this.canvas = document.createElement('canvas');
@@ -41,6 +58,16 @@ export class HBRenderer {
         baseAlpha: 0.08 + Math.random() * 0.3,
         phase: Math.random() * Math.PI * 2,
         speed: 0.5 + Math.random() * 2,
+      });
+    }
+
+    for (let i = 0; i < 25; i++) {
+      this.rain.push({
+        x: Math.random() * HB_FIELD.WIDTH,
+        y: Math.random() * HB_FIELD.GROUND_Y,
+        speed: 200 + Math.random() * 300,
+        length: 5 + Math.random() * 8,
+        alpha: 0.01 + Math.random() * 0.02,
       });
     }
   }
@@ -61,13 +88,15 @@ export class HBRenderer {
     const h = this.canvas.height;
 
     const now = performance.now();
-    const dt = this.lastTime ? Math.min((now - this.lastTime) / 1000, 0.05) : 0.016;
+    this.dt = this.lastTime ? Math.min((now - this.lastTime) / 1000, 0.05) : 0.016;
     this.lastTime = now;
-    this.time += dt;
+    this.time += this.dt;
 
     if (state.state !== this.lastState) {
       this.lastState = state.state;
       this.stateEntryTime = this.time;
+      if (state.state === 'goal_scored') this.goalParticlesSpawned = false;
+      if (state.state === 'ended') this.confettiSpawned = false;
     }
 
     ctx.clearRect(0, 0, w, h);
@@ -78,10 +107,16 @@ export class HBRenderer {
     ctx.translate(ox, oy);
     ctx.scale(this.scale, this.scale);
 
+    this.drawRain(ctx);
     this.drawBackground(ctx);
-    this.drawStands(ctx);
+    this.drawStands(ctx, state);
     this.drawField(ctx);
     this.drawGoals(ctx, state);
+
+    if (state.homePlayer) this.drawShadow(ctx, state.homePlayer.x, state.homePlayer.y, 10);
+    if (state.awayPlayer) this.drawShadow(ctx, state.awayPlayer.x, state.awayPlayer.y, 10);
+    this.drawShadow(ctx, state.ball.x, state.ball.y, state.ball.radius * 0.6);
+
     this.drawBall(ctx, state.ball);
     if (state.homePlayer) this.drawPlayer(ctx, state.homePlayer, false);
     if (state.awayPlayer) this.drawPlayer(ctx, state.awayPlayer, true);
@@ -89,12 +124,30 @@ export class HBRenderer {
 
     ctx.restore();
 
+    this.updateParticles(ctx, w, h);
+
     if (state.state === 'countdown') {
       this.drawCountdown(ctx, w, h, state);
     } else if (state.state === 'goal_scored') {
       this.drawGoalCelebration(ctx, w, h);
     } else if (state.state === 'ended') {
-      this.drawMatchEnd(ctx, w, h, state);
+      this.drawMatchEnd(ctx, w, h, state, this.dt);
+    }
+  }
+
+  private drawRain(ctx: CanvasRenderingContext2D) {
+    for (const drop of this.rain) {
+      drop.y += drop.speed * this.dt;
+      if (drop.y > HB_FIELD.GROUND_Y) {
+        drop.y = -drop.length;
+        drop.x = Math.random() * HB_FIELD.WIDTH;
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${drop.alpha})`;
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(drop.x, drop.y);
+      ctx.lineTo(drop.x - drop.length * 0.3, drop.y - drop.length);
+      ctx.stroke();
     }
   }
 
@@ -117,10 +170,13 @@ export class HBRenderer {
     }
   }
 
-  private drawStands(ctx: CanvasRenderingContext2D) {
+  private drawStands(ctx: CanvasRenderingContext2D, state: HBMatchState) {
     const standW = 50;
     const standH = 90;
     const baseY = HB_FIELD.GOAL_Y - standH + 10;
+    const isGoal = state.state === 'goal_scored';
+    const goalElapsed = isGoal ? this.time - this.stateEntryTime : 0;
+    const crowdReact = isGoal ? Math.max(0, 1 - goalElapsed / 0.8) : 0;
 
     for (const side of [-1, 1]) {
       const sx = side > 0 ? HB_FIELD.WIDTH - standW / 2 - 5 : -standW / 2 + 5;
@@ -139,7 +195,11 @@ export class HBRenderer {
         const ry = baseY + standH - 8 - row * 13;
         const offset = (row % 2) * 2;
         for (let col = 0; col < 10; col++) {
-          ctx.fillStyle = crowdColors[(row + col) % crowdColors.length];
+          if (crowdReact > 0 && (row * 10 + col + Math.floor(this.stateEntryTime * 10)) % 3 === 0) {
+            ctx.fillStyle = `rgba(0,240,255,${crowdReact * 0.6})`;
+          } else {
+            ctx.fillStyle = crowdColors[(row + col) % crowdColors.length];
+          }
           ctx.fillRect(sx + 4 + col * 4 + offset, ry, 2, 3);
         }
       }
@@ -179,9 +239,23 @@ export class HBRenderer {
     ctx.fill();
   }
 
+  private drawShadow(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+    const heightAbove = HB_FIELD.GROUND_Y - y;
+    const alpha = Math.max(0.08, 0.3 - heightAbove / HB_FIELD.GROUND_Y * 0.25);
+    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(x, HB_FIELD.GROUND_Y - 2, size * 1.5, 3, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   private drawGoals(ctx: CanvasRenderingContext2D, state: HBMatchState) {
     const postW = HB_FIELD.GOAL_POST_RADIUS * 2;
     const goalH = HB_FIELD.GOAL_HEIGHT;
+    const isGoal = state.state === 'goal_scored';
+    const goalElapsed = isGoal ? this.time - this.stateEntryTime : 0;
+    const ripple = isGoal
+      ? 3 * Math.sin(goalElapsed * 20) * Math.max(0, 1 - goalElapsed / 0.6)
+      : 0;
 
     for (const side of [-1, 1]) {
       const gx = side > 0 ? HB_FIELD.WIDTH : 0;
@@ -211,16 +285,18 @@ export class HBRenderer {
       const netLines = 8;
       for (let i = 0; i <= netLines; i++) {
         const t = i / netLines;
+        const ripp = ripple * Math.sin(t * Math.PI * 3);
         ctx.beginPath();
-        ctx.moveTo(gx, HB_FIELD.GOAL_Y + t * goalH);
-        ctx.lineTo(side > 0 ? gx - netW : gx + netW, HB_FIELD.GOAL_Y + t * goalH);
+        ctx.moveTo(gx + ripp, HB_FIELD.GOAL_Y + t * goalH);
+        ctx.lineTo(side > 0 ? gx - netW + ripp : gx + netW - ripp, HB_FIELD.GOAL_Y + t * goalH);
         ctx.stroke();
       }
       for (let i = 0; i <= 6; i++) {
         const t = i / 6;
+        const ripp = ripple * Math.sin(t * Math.PI * 2);
         ctx.beginPath();
-        ctx.moveTo(side > 0 ? gx - netW * t : gx + netW * t, HB_FIELD.GOAL_Y);
-        ctx.lineTo(side > 0 ? gx - netW * t : gx + netW * t, HB_FIELD.GOAL_Y + goalH);
+        ctx.moveTo(side > 0 ? gx - netW * t + ripp : gx + netW * t - ripp, HB_FIELD.GOAL_Y);
+        ctx.lineTo(side > 0 ? gx - netW * t + ripp : gx + netW * t - ripp, HB_FIELD.GOAL_Y + goalH);
         ctx.stroke();
       }
     }
@@ -235,6 +311,30 @@ export class HBRenderer {
 
     ctx.save();
     ctx.translate(x, bodyBot);
+
+    if (Math.abs(player.vx) > 30) {
+      const speedAlpha = Math.min(0.25, Math.abs(player.vx) / 600);
+      ctx.strokeStyle = `rgba(255,255,255,${speedAlpha})`;
+      ctx.lineWidth = 1.5;
+      for (let i = 0; i < 3; i++) {
+        const ly = -10 + i * 8;
+        ctx.beginPath();
+        ctx.moveTo(0, ly);
+        ctx.lineTo(-dir * (12 + Math.abs(player.vx) * 0.04), ly);
+        ctx.stroke();
+      }
+    }
+
+    if (player.isKicking) {
+      const kickProgress = 1 - player.kickTimer / HB_PLAYER.KICK_DURATION;
+      const sparkR = 6 + kickProgress * 12;
+      const sparkAlpha = 0.4 * (1 - kickProgress);
+      ctx.strokeStyle = `rgba(255,255,255,${sparkAlpha})`;
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(dir * 16, -10, sparkR, 0, Math.PI * 2);
+      ctx.stroke();
+    }
 
     const legAnim = Math.sin(player.animFrame) * 6;
 
@@ -298,6 +398,24 @@ export class HBRenderer {
   }
 
   private drawBall(ctx: CanvasRenderingContext2D, ball: HBBallState) {
+    const speed = Math.sqrt(ball.vx * ball.vx + ball.vy * ball.vy);
+    if (speed > 100) {
+      this.trail.push({ x: ball.x, y: ball.y });
+      if (this.trail.length > 6) this.trail.shift();
+    } else if (this.trail.length > 0) {
+      this.trail.shift();
+    }
+
+    for (let i = 0; i < this.trail.length; i++) {
+      const t = this.trail[i];
+      const alpha = (i / this.trail.length) * 0.2;
+      ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+      const r = ball.radius * (0.3 + 0.7 * (i / this.trail.length));
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.save();
     ctx.translate(ball.x, ball.y);
 
@@ -330,8 +448,6 @@ export class HBRenderer {
     const elapsed = this.time - this.stateEntryTime;
     const goalFlash = isGoal ? Math.max(0, 1 - elapsed / 0.6) : 0;
 
-    const pulse = 1 + 0.03 * Math.sin(this.time * 2);
-
     ctx.save();
     ctx.translate(mx, 24);
 
@@ -347,7 +463,7 @@ export class HBRenderer {
     ctx.translate(-6, 0);
     ctx.scale(homeScale, homeScale);
     ctx.fillStyle = isGoal ? '#00f0ff' : '#2563eb';
-    ctx.font = `bold ${16}px sans-serif`;
+    ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     ctx.fillText(String(state.homeScore), 0, 0);
@@ -440,6 +556,23 @@ export class HBRenderer {
   private drawGoalCelebration(ctx: CanvasRenderingContext2D, w: number, h: number) {
     const elapsed = this.time - this.stateEntryTime;
 
+    if (!this.goalParticlesSpawned && elapsed < 0.05) {
+      this.goalParticlesSpawned = true;
+      const burstColors = ['#00f0ff', '#fff', '#8b5cf6', '#22c55e', '#f59e0b'];
+      for (let i = 0; i < 30; i++) {
+        const angle = (Math.PI * 2 * i) / 30 + (Math.random() - 0.5) * 0.4;
+        const speed = 80 + Math.random() * 150;
+        this.particles.push({
+          x: w / 2, y: h / 2,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1, maxLife: 0.6 + Math.random() * 0.4,
+          color: burstColors[Math.floor(Math.random() * burstColors.length)],
+          size: 2 + Math.random() * 4,
+        });
+      }
+    }
+
     if (elapsed < 0.3) {
       const flashAlpha = 0.2 * (1 - elapsed / 0.3);
       ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
@@ -480,8 +613,44 @@ export class HBRenderer {
     ctx.restore();
   }
 
-  private drawMatchEnd(ctx: CanvasRenderingContext2D, w: number, h: number, state: HBMatchState) {
+  private drawMatchEnd(ctx: CanvasRenderingContext2D, w: number, h: number, state: HBMatchState, dt: number) {
     const elapsed = this.time - this.stateEntryTime;
+
+    if (!this.confettiSpawned && elapsed < 0.05) {
+      this.confettiSpawned = true;
+      const confettiColors = ['#2563eb', '#dc2626', '#00f0ff', '#8b5cf6', '#22c55e', '#f59e0b', '#fff'];
+      for (let i = 0; i < 60; i++) {
+        this.confetti.push({
+          x: Math.random() * w,
+          y: -Math.random() * h * 0.5,
+          vx: (Math.random() - 0.5) * 100,
+          vy: 80 + Math.random() * 200,
+          color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
+          rot: Math.random() * Math.PI * 2,
+          rv: (Math.random() - 0.5) * 8,
+          size: 4 + Math.random() * 6,
+        });
+      }
+    }
+
+    for (const c of this.confetti) {
+      c.x += c.vx * dt;
+      c.y += c.vy * dt;
+      c.vy += 180 * dt;
+      c.rot += c.rv * dt;
+      if (c.y > h + 20) { c.y = -20; c.x = Math.random() * w; c.vy = 80 + Math.random() * 120; }
+    }
+
+    for (const c of this.confetti) {
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(c.rot);
+      ctx.fillStyle = c.color;
+      ctx.globalAlpha = 0.85;
+      ctx.fillRect(-c.size / 2, -2, c.size, 4);
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
 
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, 0, w, h);
@@ -556,6 +725,31 @@ export class HBRenderer {
     ctx.restore();
   }
 
+  private updateParticles(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    for (let i = this.particles.length - 1; i >= 0; i--) {
+      const p = this.particles[i];
+      p.x += p.vx * this.dt;
+      p.y += p.vy * this.dt;
+      p.vy += 100 * this.dt;
+      p.life -= this.dt / p.maxLife;
+
+      if (p.life <= 0) {
+        this.particles.splice(i, 1);
+        continue;
+      }
+
+      ctx.save();
+      ctx.globalAlpha = p.life;
+      ctx.fillStyle = p.color;
+      ctx.translate(p.x, p.y);
+      ctx.beginPath();
+      ctx.arc(0, 0, p.size * p.life, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    ctx.globalAlpha = 1;
+  }
+
   drawTouchControls() {
     if (!('ontouchstart' in window)) return;
     const ctx = this.ctx;
@@ -567,6 +761,7 @@ export class HBRenderer {
     const pad = 20 * this.scale;
 
     const kickPulse = 1 + 0.05 * Math.sin(this.time * 3);
+    const jumpPulse = 1 + 0.04 * Math.sin(this.time * 2.5 + 1);
 
     ctx.globalAlpha = 0.25;
 
@@ -608,9 +803,13 @@ export class HBRenderer {
     const jumpY = pad + btnR;
     ctx.fillStyle = '#22c55e';
     ctx.globalAlpha = 0.3;
+    ctx.save();
+    ctx.translate(jumpX, jumpY);
+    ctx.scale(jumpPulse, jumpPulse);
     ctx.beginPath();
-    ctx.arc(jumpX, jumpY, btnR, 0, Math.PI * 2);
+    ctx.arc(0, 0, btnR, 0, Math.PI * 2);
     ctx.fill();
+    ctx.restore();
     ctx.globalAlpha = 0.25;
     ctx.fillStyle = '#fff';
     ctx.fillText('↑', jumpX, jumpY);
