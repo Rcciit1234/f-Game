@@ -38,11 +38,6 @@ export class HBMenu {
     const style = document.createElement('style');
     style.id = 'hb-anim-style';
     style.textContent = `
-@keyframes hbGradientShift {
-  0% { background-position: 0% 50%; }
-  50% { background-position: 100% 50%; }
-  100% { background-position: 0% 50%; }
-}
 @keyframes hbFloat {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-10px); }
@@ -51,30 +46,13 @@ export class HBMenu {
   0%, 100% { filter: drop-shadow(0 0 15px rgba(0,240,255,0.15)); }
   50% { filter: drop-shadow(0 0 35px rgba(0,240,255,0.35)); }
 }
-@keyframes hbOrbDrift {
-  0% { transform: translate(0, 0); }
-  25% { transform: translate(30px, -20px); }
-  50% { transform: translate(-20px, -50px); }
-  75% { transform: translate(-40px, -10px); }
-  100% { transform: translate(0, 0); }
-}
-@keyframes hbOrbDrift2 {
-  0% { transform: translate(0, 0); }
-  33% { transform: translate(-30px, 30px); }
-  66% { transform: translate(20px, -20px); }
-  100% { transform: translate(0, 0); }
-}
-@keyframes hbGridScroll {
-  0% { transform: perspective(400px) rotateX(60deg) translateY(0); }
-  100% { transform: perspective(400px) rotateX(60deg) translateY(60px); }
-}
 @keyframes hbFadeIn {
   from { opacity: 0; transform: translateY(12px); }
   to { opacity: 1; transform: translateY(0); }
 }
 @keyframes hbBtnGlow {
   0%, 100% { box-shadow: 0 4px 15px rgba(37,99,235,0.2); }
-  50% { box-shadow: 0 4px 25px rgba(37,99,235,0.4); }
+  50% { box-shadow: 0 4px 30px rgba(37,99,235,0.5); }
 }
 @keyframes hbCodePulse {
   0%, 100% { border-color: rgba(0,240,255,0.15); }
@@ -85,9 +63,61 @@ export class HBMenu {
   25% { transform: rotate(-3deg); }
   75% { transform: rotate(3deg); }
 }
-@keyframes hbSpin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
+@keyframes hbFloodPulse {
+  0%, 100% { opacity: 0.06; }
+  50% { opacity: 0.12; }
+}
+@keyframes hbFooty1 {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  25% { transform: translate(50px, -25px) rotate(90deg); }
+  50% { transform: translate(-20px, 30px) rotate(180deg); }
+  75% { transform: translate(30px, -15px) rotate(270deg); }
+  100% { transform: translate(0, 0) rotate(360deg); }
+}
+@keyframes hbFooty2 {
+  0% { transform: translate(0, 0) rotate(0deg); }
+  33% { transform: translate(-40px, -30px) rotate(120deg); }
+  66% { transform: translate(25px, 25px) rotate(240deg); }
+  100% { transform: translate(0, 0) rotate(360deg); }
+}
+@keyframes hbFooty3 {
+  0% { transform: translate(0, 0) rotate(0deg) scale(1); }
+  25% { transform: translate(-30px, -40px) rotate(90deg) scale(0.9); }
+  50% { transform: translate(35px, 20px) rotate(180deg) scale(1.1); }
+  75% { transform: translate(-25px, -10px) rotate(270deg) scale(0.95); }
+  100% { transform: translate(0, 0) rotate(360deg) scale(1); }
+}
+@keyframes hfCheerBlue {
+  0%, 2%, 28%, 100% { transform: translateY(0); }
+  3%, 12% { transform: translateY(-4px); }
+}
+@keyframes hfCheerRed {
+  0%, 52%, 78%, 100% { transform: translateY(0); }
+  53%, 62% { transform: translateY(-4px); }
+}
+@keyframes hfArmLUp {
+  0%, 2%, 28%, 100% { transform: rotate(0deg); }
+  3%, 12% { transform: rotate(-65deg) translateX(-2px); }
+}
+@keyframes hfArmRUp {
+  0%, 2%, 28%, 100% { transform: rotate(0deg); }
+  3%, 12% { transform: rotate(65deg) translateX(2px); }
+}
+@keyframes hfArmLRed {
+  0%, 52%, 78%, 100% { transform: rotate(0deg); }
+  53%, 62% { transform: rotate(-65deg) translateX(-2px); }
+}
+@keyframes hfArmRRed {
+  0%, 52%, 78%, 100% { transform: rotate(0deg); }
+  53%, 62% { transform: rotate(65deg) translateX(2px); }
+}
+@keyframes hfBubbleBlue {
+  0%, 2%, 25%, 100% { opacity: 0; transform: scale(0) translateY(0); }
+  3%, 12% { opacity: 1; transform: scale(1) translateY(0); }
+}
+@keyframes hfBubbleRed {
+  0%, 52%, 75%, 100% { opacity: 0; transform: scale(0) translateY(0); }
+  53%, 62% { opacity: 1; transform: scale(1) translateY(0); }
 }
 .hb-btn-primary {
   transition: all 0.25s ease !important;
@@ -162,11 +192,49 @@ export class HBMenu {
   }
 
   private wrap(inner: string) {
+    const fan = (side: 'L' | 'R', team: 'blue' | 'red', idx: number, top: number, left: number) => {
+      const isBlue = team === 'blue';
+      const color = isBlue ? '#2563eb' : '#dc2626';
+      const bodyClass = isBlue ? 'hf-body-b' : 'hf-body-r';
+      const cheerAnim = isBlue ? 'hfCheerBlue' : 'hfCheerRed';
+      const armL = isBlue ? 'hfArmLUp' : 'hfArmLRed';
+      const armR = isBlue ? 'hfArmRUp' : 'hfArmRRed';
+      const bubble = isBlue ? 'hfBubbleBlue' : 'hfBubbleRed';
+      const delay = idx * 0.3;
+      return `<div style="position:absolute;top:${top}%;left:${left}%;animation:${cheerAnim} 10s ease-in-out ${delay}s infinite;">
+        <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:7px;font-weight:900;color:#00f0ff;animation:${bubble} 10s ease-in-out ${delay}s infinite;">⚽ GOAL!</div>
+        <div style="width:12px;height:12px;border-radius:50%;background:#f0d0b0;margin:0 auto;position:relative;z-index:1;"></div>
+        <div style="position:relative;width:14px;height:18px;border-radius:2px 2px 0 0;background:${color};margin:0 auto;">
+          <div style="position:absolute;top:-16px;right:100%;width:2.5px;height:12px;background:#f0d0b0;border-radius:2px;transform-origin:bottom center;animation:${armL} 10s ease-in-out ${delay}s infinite;"></div>
+          <div style="position:absolute;top:-16px;left:100%;width:2.5px;height:12px;background:#f0d0b0;border-radius:2px;transform-origin:bottom center;animation:${armR} 10s ease-in-out ${delay}s infinite;"></div>
+        </div>
+      </div>`;
+    };
+
     return `
-      <div style="position:relative;overflow:hidden;height:100%;background:linear-gradient(135deg,#0f172a 0%,#1e293b 50%,#0f172a 100%);background-size:200% 200%;animation:hbGradientShift 8s ease infinite;color:#fff;font-family:sans-serif;">
-        <div style="position:absolute;inset:0;opacity:0.15;background-image:linear-gradient(rgba(0,240,255,0.06) 1px,transparent 1px),linear-gradient(90deg,rgba(0,240,255,0.06) 1px,transparent 1px);background-size:60px 60px;animation:hbGridScroll 20s linear infinite;"></div>
-        <div style="position:absolute;width:450px;height:450px;border-radius:50%;background:radial-gradient(circle,rgba(0,240,255,0.06) 0%,transparent 70%);top:50%;left:15%;filter:blur(40px);animation:hbOrbDrift 12s ease-in-out infinite;"></div>
-        <div style="position:absolute;width:350px;height:350px;border-radius:50%;background:radial-gradient(circle,rgba(139,92,246,0.06) 0%,transparent 70%);top:20%;right:10%;filter:blur(40px);animation:hbOrbDrift2 15s ease-in-out infinite;"></div>
+      <div style="position:relative;overflow:hidden;height:100%;background:linear-gradient(180deg,#0d0d1a 0%,#1a1530 30%,#1a0a00 55%,#0d0d1a 100%);color:#fff;font-family:sans-serif;">
+        <div style="position:absolute;inset:0;opacity:0.08;background-image:linear-gradient(rgba(255,200,100,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,200,100,0.03) 1px,transparent 1px);background-size:60px 60px;transform:perspective(300px) rotateX(60deg);transform-origin:center bottom;"></div>
+
+        <div style="position:absolute;top:0;left:5%;width:90%;height:50px;background:linear-gradient(180deg,#1a1a2e,#12122a);border-radius:0 0 50% 50%;box-shadow:0 4px 30px rgba(255,180,80,0.08);"></div>
+        <div style="position:absolute;top:10px;left:5%;width:90%;height:2px;background:linear-gradient(90deg,transparent,rgba(255,200,100,0.15),transparent);animation:hbFloodPulse 4s ease-in-out infinite;"></div>
+
+        <div style="position:absolute;top:40px;left:8%;width:2px;height:180px;background:linear-gradient(to bottom,rgba(255,200,100,0.1),transparent);transform:rotate(-4deg);animation:hbFloodPulse 3s ease-in-out infinite;"></div>
+        <div style="position:absolute;top:40px;right:8%;width:2px;height:180px;background:linear-gradient(to bottom,rgba(255,200,100,0.1),transparent);transform:rotate(4deg);animation:hbFloodPulse 3s ease-in-out infinite reverse;"></div>
+
+        <div style="position:absolute;bottom:15%;left:50%;transform:translateX(-50%);width:260px;height:70px;background:radial-gradient(ellipse,rgba(45,138,78,0.1),transparent);border-radius:50%;"></div>
+
+        ${fan('L', 'blue', 0, 20, 8)}
+        ${fan('L', 'blue', 1, 30, 11)}
+        ${fan('L', 'blue', 2, 40, 7)}
+
+        ${fan('R', 'red', 0, 22, 83)}
+        ${fan('R', 'red', 1, 32, 80)}
+        ${fan('R', 'red', 2, 42, 86)}
+
+        <div style="position:absolute;font-size:22px;top:18%;left:22%;opacity:0.06;animation:hbFooty1 14s linear infinite;pointer-events:none;">⚽</div>
+        <div style="position:absolute;font-size:16px;top:35%;right:20%;opacity:0.04;animation:hbFooty2 18s linear infinite;pointer-events:none;">⚽</div>
+        <div style="position:absolute;font-size:28px;top:48%;left:45%;opacity:0.04;animation:hbFooty3 20s linear infinite;pointer-events:none;">⚽</div>
+
         <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;box-sizing:border-box;animation:hbFadeIn 0.4s ease;">
           ${inner}
         </div>
