@@ -973,24 +973,57 @@ export class HBRenderer {
     ctx.save();
     ctx.translate(ball.x, ball.y);
 
-    ctx.fillStyle = '#fff';
+    const r = Math.max(ball.radius, 11);
+
+    const grad = ctx.createRadialGradient(-r * 0.25, -r * 0.3, 0, 0, 0, r + 1);
+    grad.addColorStop(0, '#ffffff');
+    grad.addColorStop(0.6, '#f5f5f5');
+    grad.addColorStop(0.85, '#e0e0e0');
+    grad.addColorStop(1, '#c0c0c0');
+
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(0, 0, ball.radius + 1, 0, Math.PI * 2);
+    ctx.arc(0, 0, r + 1, 0, Math.PI * 2);
     ctx.fill();
 
-    ctx.fillStyle = '#222';
+    ctx.strokeStyle = 'rgba(0,0,0,0.12)';
+    ctx.lineWidth = 0.5;
     ctx.beginPath();
-    ctx.arc(0, 0, ball.radius, 0, Math.PI * 2);
+    ctx.arc(0, 0, r + 1, 0, Math.PI * 2);
+    ctx.stroke();
+
+    const pentR = r * 0.36;
+    ctx.fillStyle = '#1a1a1a';
+    ctx.beginPath();
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+      const px = Math.cos(a) * pentR;
+      const py = Math.sin(a) * pentR;
+      i === 0 ? ctx.moveTo(px, py) : ctx.lineTo(px, py);
+    }
+    ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#fff';
-    ctx.beginPath();
-    ctx.arc(0, -ball.radius * 0.2, ball.radius * 0.5, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.strokeStyle = 'rgba(0,0,0,0.3)';
+    ctx.lineWidth = 0.7;
+    for (let i = 0; i < 5; i++) {
+      const a = -Math.PI / 2 + (i * 2 * Math.PI) / 5;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * pentR, Math.sin(a) * pentR);
+      const off = i % 2 === 0 ? 1 : -1;
+      const midA = a + 0.18 * off;
+      ctx.quadraticCurveTo(
+        Math.cos(midA) * r * 0.6,
+        Math.sin(midA) * r * 0.6,
+        Math.cos(a) * (r - 0.3),
+        Math.sin(a) * (r - 0.3),
+      );
+      ctx.stroke();
+    }
 
-    ctx.fillStyle = '#333';
+    ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.beginPath();
-    ctx.arc(0, 0, ball.radius * 0.15, 0, Math.PI * 2);
+    ctx.ellipse(-r * 0.25, -r * 0.25, r * 0.35, r * 0.22, -0.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();

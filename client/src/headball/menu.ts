@@ -15,6 +15,10 @@ export class HBMenu {
   private opponentJoined = false;
   private errorMsg: string = '';
   private joinCodeInput: string = '';
+  private animFrameId = 0;
+  private menuCanvas: HTMLCanvasElement | null = null;
+  private menuAnimTime = 0;
+  private menuAnimLastTime = 0;
 
   constructor(
     container: HTMLElement,
@@ -119,25 +123,60 @@ export class HBMenu {
   0%, 52%, 75%, 100% { opacity: 0; transform: scale(0) translateY(0); }
   53%, 62% { opacity: 1; transform: scale(1) translateY(0); }
 }
+@keyframes hbFlagFloat {
+  0%, 100% { transform: translateY(0px) rotate(0deg); }
+  25% { transform: translateY(-8px) rotate(-1deg); }
+  50% { transform: translateY(-12px) rotate(0.5deg); }
+  75% { transform: translateY(-4px) rotate(1deg); }
+}
+@keyframes hbFlagWave {
+  0%, 100% { transform: skewY(0deg); }
+  25% { transform: skewY(2deg); }
+  75% { transform: skewY(-2deg); }
+}
+@keyframes hbFlagUnfurl {
+  from { width: 0; opacity: 0; }
+  to { width: 100%; opacity: 1; }
+}
+@keyframes hbSparkleDrift {
+  0% { transform: translateY(0) translateX(0) scale(0); opacity: 0; }
+  20% { opacity: 0.5; scale: 1; }
+  80% { opacity: 0.3; }
+  100% { transform: translateY(-60px) translateX(20px) scale(0); opacity: 0; }
+}
+.hb-menu-card {
+  background: rgba(8,8,24,0.45);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 24px;
+  padding: 28px 32px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  animation: hbFadeIn 0.5s ease;
+  max-width: 290px;
+  width: 100%;
+  box-shadow: 0 8px 40px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.05);
+}
 .hb-btn-primary {
-  transition: all 0.25s ease !important;
+  transition: all 0.2s cubic-bezier(0.34,1.56,0.64,1) !important;
 }
 .hb-btn-primary:hover {
-  transform: translateY(-2px) scale(1.02) !important;
-  box-shadow: 0 6px 30px rgba(37,99,235,0.45) !important;
+  transform: translateY(-2px) scale(1.03) !important;
+  box-shadow: 0 8px 32px rgba(37,99,235,0.5) !important;
 }
 .hb-btn-primary:active {
-  transform: scale(0.96) !important;
+  transform: scale(0.95) !important;
+  transition-duration: 0.05s !important;
 }
 .hb-btn-secondary {
-  transition: all 0.25s ease !important;
+  transition: all 0.2s ease !important;
 }
 .hb-btn-secondary:hover {
   color: rgba(255,255,255,0.7) !important;
-}
-.hb-code-input:focus {
-  border-color: rgba(0,240,255,0.5) !important;
-  box-shadow: 0 0 20px rgba(0,240,255,0.1) !important;
+  transform: scale(1.02) !important;
 }
     `.trim();
     document.head.appendChild(style);
@@ -223,6 +262,37 @@ export class HBMenu {
 
         <div style="position:absolute;bottom:15%;left:50%;transform:translateX(-50%);width:260px;height:70px;background:radial-gradient(ellipse,rgba(45,138,78,0.1),transparent);border-radius:50%;"></div>
 
+        <canvas id="hb-menu-canvas" style="position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;"></canvas>
+
+        <!-- Argentina Flag (left) -->
+        <div style="position:absolute;top:28%;left:1.5%;z-index:10;pointer-events:none;animation:hbFlagFloat 6s ease-in-out infinite;">
+          <div style="width:2.5px;height:110px;background:linear-gradient(to bottom,rgba(255,255,255,0.12),rgba(200,200,200,0.35));margin:0 auto;"></div>
+          <div style="background:rgba(0,0,0,0.35);border-radius:4px;padding:4px;display:inline-block;">
+            <div style="width:95px;height:60px;border:1.5px solid rgba(255,255,255,0.12);border-radius:2px;overflow:hidden;position:relative;animation:hbFlagWave 4s ease-in-out infinite;transform-origin:left center;">
+              <div style="height:33.33%;background:#6abfde;"></div>
+              <div style="height:33.33%;background:#ffffff;"></div>
+              <div style="height:33.34%;background:#6abfde;"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:18px;height:18px;border-radius:50%;background:radial-gradient(circle,#ffdd44 40%,#ffc400 70%,#e6a800 100%);box-shadow:0 0 10px rgba(255,196,0,0.5);border:1px solid rgba(230,168,0,0.3);"></div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,0.35);margin-top:4px;letter-spacing:1px;">ARGENTINA</div>
+        </div>
+
+        <!-- Spain Flag (right) -->
+        <div style="position:absolute;top:28%;right:1.5%;z-index:10;pointer-events:none;animation:hbFlagFloat 7s ease-in-out infinite reverse;">
+          <div style="width:2.5px;height:110px;background:linear-gradient(to bottom,rgba(255,255,255,0.12),rgba(200,200,200,0.35));margin:0 auto;"></div>
+          <div style="background:rgba(0,0,0,0.35);border-radius:4px;padding:4px;display:inline-block;">
+            <div style="width:95px;height:60px;border:1.5px solid rgba(255,255,255,0.12);border-radius:2px;overflow:hidden;position:relative;animation:hbFlagWave 4.5s ease-in-out infinite reverse;transform-origin:right center;">
+              <div style="height:25%;background:#c60b1e;"></div>
+              <div style="height:50%;background:#ffc400;"></div>
+              <div style="height:25%;background:#c60b1e;"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:22px;height:24px;background:#c60b1e;border-radius:3px 3px 5px 5px;"></div>
+              <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:14px;height:16px;background:linear-gradient(180deg,#ffc400 40%,#c60b1e 40%);border-radius:1px;"></div>
+            </div>
+          </div>
+          <div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,0.35);margin-top:4px;letter-spacing:1px;">ESPAÑA</div>
+        </div>
+
         ${fan('L', 'blue', 0, 20, 8)}
         ${fan('L', 'blue', 1, 30, 11)}
         ${fan('L', 'blue', 2, 40, 7)}
@@ -235,8 +305,10 @@ export class HBMenu {
         <div style="position:absolute;font-size:16px;top:35%;right:20%;opacity:0.04;animation:hbFooty2 18s linear infinite;pointer-events:none;">⚽</div>
         <div style="position:absolute;font-size:28px;top:48%;left:45%;opacity:0.04;animation:hbFooty3 20s linear infinite;pointer-events:none;">⚽</div>
 
-        <div style="position:relative;z-index:2;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;box-sizing:border-box;animation:hbFadeIn 0.4s ease;">
-          ${inner}
+        <div style="position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;justify-content:center;height:100%;gap:20px;padding:20px;box-sizing:border-box;">
+          <div class="hb-menu-card">
+            ${inner}
+          </div>
         </div>
       </div>
     `;
@@ -248,19 +320,242 @@ export class HBMenu {
       : 'class="hb-btn-secondary" style="padding:8px 16px;border:none;border-radius:8px;background:transparent;color:rgba(255,255,255,0.4);font-size:0.85rem;cursor:pointer;width:100%;';
   }
 
+  // ─── Canvas Animation ───
+  private startMenuAnimation() {
+    cancelAnimationFrame(this.animFrameId);
+    const canvas = document.getElementById('hb-menu-canvas') as HTMLCanvasElement;
+    if (!canvas) return;
+    this.menuCanvas = canvas;
+    const ctx = canvas.getContext('2d')!;
+    let w = 0, h = 0;
+
+    const resize = () => {
+      const rect = canvas.parentElement!.getBoundingClientRect();
+      w = rect.width;
+      h = rect.height;
+      canvas.width = w * devicePixelRatio;
+      canvas.height = h * devicePixelRatio;
+    };
+    resize();
+    window.addEventListener('resize', resize);
+
+    this.menuAnimTime = 0;
+    this.menuAnimLastTime = 0;
+
+    const loop = (t: number) => {
+      if (!this.menuCanvas || !document.contains(this.menuCanvas)) {
+        this.animFrameId = 0;
+        return;
+      }
+      if (this.menuAnimLastTime === 0) this.menuAnimLastTime = t;
+      const rawDt = (t - this.menuAnimLastTime) / 1000;
+      this.menuAnimLastTime = t;
+      this.menuAnimTime += Math.min(rawDt, 0.05);
+
+      ctx.save();
+      ctx.scale(devicePixelRatio, devicePixelRatio);
+      ctx.clearRect(0, 0, w, h);
+
+      const time = this.menuAnimTime;
+      const s = Math.min(w / 540, h / 600) * 0.7;
+      const cy = h * 0.56;
+
+      this.drawMenuChar(ctx, w * 0.22, cy, s, time, true);
+      this.drawMenuChar(ctx, w * 0.78, cy, s, time, false);
+
+      ctx.fillStyle = 'rgba(255,255,255,0.04)';
+      for (let i = 0; i < 8; i++) {
+        const px = ((i * 0.31 + time * 0.015) % 1) * w;
+        const py = h * 0.2 + Math.sin(time * 0.4 + i * 1.7) * h * 0.18;
+        ctx.beginPath();
+        ctx.arc(px, py, 1.2 + Math.sin(time + i) * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+
+      ctx.restore();
+      this.animFrameId = requestAnimationFrame(loop);
+    };
+    this.animFrameId = requestAnimationFrame(loop);
+  }
+
+  private drawMenuChar(
+    ctx: CanvasRenderingContext2D,
+    cx: number, cy: number,
+    scale: number, time: number,
+    isArgentina: boolean,
+  ) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.scale(scale, scale);
+
+    const skin = '#f0c8a0';
+    const jersey = isArgentina ? '#6abfde' : '#c60b1e';
+    const bW = 44, bH = 38, hr = 34;
+    const headY = -hr * 0.5;
+    const num = isArgentina ? '10' : '8';
+    const hair = isArgentina ? '#3a2a1a' : '#9a8a7a';
+    const bob = Math.sin(time * 2.5) * 3;
+    const armWave = Math.sin(time * 4) * 7;
+    const blinkCycle = time % 4;
+    const blinking = blinkCycle > 3.85;
+    const lookX = isArgentina ? 2 : -2;
+
+    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+    ctx.beginPath();
+    ctx.ellipse(0, bH + 16, bW * 0.6, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.translate(0, bob);
+
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-8, bH - 4); ctx.lineTo(-12, bH + 12);
+    ctx.moveTo(8, bH - 4); ctx.lineTo(12, bH + 12);
+    ctx.stroke();
+
+    ctx.fillStyle = jersey;
+    ctx.beginPath();
+    ctx.roundRect(-bW / 2, 0, bW, bH, 6);
+    ctx.fill();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.roundRect(-bW / 2, 0, bW, bH, 6);
+    ctx.clip();
+    if (isArgentina) {
+      ctx.fillStyle = 'rgba(255,255,255,0.35)';
+      for (let i = -20; i < 30; i += 8) ctx.fillRect(i, 0, 3, bH);
+    } else {
+      ctx.fillStyle = 'rgba(255,196,0,0.45)';
+      ctx.fillRect(-bW / 2, bH * 0.3, bW, bH * 0.18);
+    }
+    ctx.restore();
+
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(num, 0, bH * 0.55);
+
+    ctx.strokeStyle = skin;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-bW / 2, 6);
+    ctx.lineTo(-bW / 2 - 20, -8 + armWave);
+    ctx.moveTo(bW / 2, 6);
+    ctx.lineTo(bW / 2 + 20, -8 - armWave);
+    ctx.stroke();
+
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(-bW / 2 - 20, -8 + armWave, 4, 0, Math.PI * 2);
+    ctx.arc(bW / 2 + 20, -8 - armWave, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = skin;
+    ctx.beginPath();
+    ctx.arc(0, headY, hr, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = jersey;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - hr * 0.35, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(0, headY - hr * 0.35, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
+    ctx.clip();
+    if (isArgentina) {
+      ctx.fillStyle = '#fff';
+      for (let i = -24; i < 30; i += 7) ctx.fillRect(i, headY - hr * 0.35 - 6, 2.5, 12);
+    }
+    ctx.restore();
+
+    ctx.fillStyle = hair;
+    ctx.beginPath();
+    ctx.arc(0, headY - hr * 0.35, hr * 1.05, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, headY - hr * 0.8, hr * 1, hr * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (blinking) {
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-16, headY - 2); ctx.lineTo(-4, headY - 2);
+      ctx.moveTo(4, headY - 2); ctx.lineTo(16, headY - 2);
+      ctx.stroke();
+    } else {
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.ellipse(-10, headY - 2, 7, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(10, headY - 2, 7, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#111';
+      ctx.beginPath();
+      ctx.arc(-10 + lookX, headY - 1, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(10 + lookX, headY - 1, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(-8 + lookX, headY - 4, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(12 + lookX, headY - 4, 1.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.strokeStyle = hair;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(-17, headY - 13); ctx.lineTo(-5, headY - 12);
+    ctx.moveTo(5, headY - 12); ctx.lineTo(17, headY - 13);
+    ctx.stroke();
+
+    ctx.strokeStyle = '#b91c1c';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, headY + 10, 8, 0.15, Math.PI - 0.15);
+    ctx.stroke();
+
+    if (isArgentina) {
+      ctx.fillStyle = 'rgba(50,35,20,0.18)';
+      ctx.beginPath();
+      ctx.ellipse(0, headY + 5, 13, 7, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+
   // ─── Main ───
   private buildMain() {
     this.container.innerHTML = this.wrap(`
-      <div style="font-size:3rem;margin-bottom:10px;animation:hbFloat 3s ease-in-out infinite;">⚽</div>
-      <h1 style="font-size:1.8rem;margin:0;background:linear-gradient(90deg,#00f0ff,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:hbPulse 2.5s ease-in-out infinite;">HEAD BALL</h1>
-      <p style="color:rgba(255,255,255,0.4);font-size:0.85rem;margin:0;">1v1 Big-Head Football</p>
-      <div style="display:flex;flex-direction:column;gap:12px;margin-top:20px;width:220px;">
-        <button id="hb-ai-btn" style="${this.btnStyle(true)}">Play vs AI</button>
-        <button id="hb-create-btn" style="${this.btnStyle(true)}">Create Room</button>
-        <button id="hb-join-btn" style="${this.btnStyle(true)}">Join Room</button>
+      <div style="font-size:2.8rem;margin-bottom:4px;animation:hbFloat 3s ease-in-out infinite;">⚽</div>
+      <h1 style="font-size:2.2rem;margin:0;background:linear-gradient(135deg,#00f0ff,#8b5cf6,#00f0ff);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:hbPulse 2.5s ease-in-out infinite;letter-spacing:3px;text-shadow:0 0 40px rgba(0,240,255,0.15);">HEAD BALL</h1>
+      <p style="color:rgba(255,255,255,0.35);font-size:0.8rem;margin:0;letter-spacing:2px;text-transform:uppercase;">1v1 Big-Head Football</p>
+      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;width:100%;">
+        <button id="hb-ai-btn" style="${this.btnStyle(true)}">🎮 Play vs AI</button>
+        <button id="hb-create-btn" style="${this.btnStyle(true)}">🌐 Create Room</button>
+        <button id="hb-join-btn" style="${this.btnStyle(true)}">🔗 Join Room</button>
         <button id="hb-back-btn" style="${this.btnStyle(false)}" data-role="back">← Back</button>
       </div>
     `);
+    this.startMenuAnimation();
     this.listen('hb-ai-btn', 'click', () => this.onStartAI());
     this.listen('hb-create-btn', 'click', () => this.becomeHost());
     this.listen('hb-join-btn', 'click', () => this.setState('joining'));
@@ -398,6 +693,9 @@ export class HBMenu {
   }
 
   destroy() {
+    cancelAnimationFrame(this.animFrameId);
+    this.animFrameId = 0;
+    this.menuCanvas = null;
     this.container.innerHTML = '';
     const style = document.getElementById('hb-anim-style');
     if (style) style.remove();
