@@ -34,6 +34,8 @@ export interface HBInput {
   jump: boolean;
   kick: boolean;
   kickHold: boolean;
+  superKick: boolean;
+  defence: boolean;
 }
 
 export interface HBMatchState {
@@ -66,13 +68,13 @@ export const HB_PLAYER = {
   BODY_HEIGHT: 26,
   LEG_LENGTH: 18,
   ARM_LENGTH: 14,
-  MOVE_SPEED: 220,
-  JUMP_VELOCITY: -420,
+  MOVE_SPEED: 170,
+  JUMP_VELOCITY: -360,
   JUMP_HOLD_FORCE: -180,
   MAX_JUMP_HOLD_TIME: 0.15,
   KICK_RANGE: 32,
   KICK_DURATION: 0.25,
-  LOW_KICK_SPEED: 380,
+  LOW_KICK_SPEED: 320,
   HIGH_KICK_SPEED: 220,
   HIGH_KICK_Y: -180,
   HEAD_BOUNCE: 1.2,
@@ -80,11 +82,11 @@ export const HB_PLAYER = {
 
 export const HB_BALL = {
   RADIUS: 7,
-  GRAVITY: 580,
-  BOUNCE: 0.5,
+  GRAVITY: 350,
+  BOUNCE: 0.6,
   GROUND_FRICTION: 0.88,
-  AIR_RESISTANCE: 0.003,
-  MAX_SPEED: 500,
+  AIR_RESISTANCE: 0.001,
+  MAX_SPEED: 480,
 } as const;
 
 export const HB_MATCH = {

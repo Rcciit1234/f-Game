@@ -8,17 +8,19 @@ const KEY_MAP: HBKeyMap = {
   'w': 'jump', 'W': 'jump', 'ArrowUp': 'jump',
   ' ': 'kick',
   's': 'kickHold', 'S': 'kickHold', 'ArrowDown': 'kickHold',
+  'm': 'superKick', 'M': 'superKick',
 };
 
 export class HBControls {
   private keys: Set<string> = new Set();
   private callbacks: Array<(input: HBInput) => void> = [];
-  private touchState: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false };
+  private touchState: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false };
 
   private leftTouch: number | null = null;
   private rightTouch: number | null = null;
   private jumpTouch: number | null = null;
   private kickTouch: number | null = null;
+  private defenceTouch: number | null = null;
 
   constructor() {
     this.setupKeyboard();
@@ -50,7 +52,9 @@ export class HBControls {
       right: this.rightTouch !== null,
       jump: this.jumpTouch !== null,
       kick: this.kickTouch !== null,
-      kickHold: this.kickTouch !== null,
+      kickHold: false,
+      defence: this.defenceTouch !== null,
+      superKick: false,
     });
 
     const el = () => document.getElementById('headball-canvas') || document.body;
@@ -66,24 +70,30 @@ export class HBControls {
           this.leftTouch = touch.identifier;
         } else if (x > sw * 0.35 && x < sw * 0.5 && y > sh * 0.65) {
           this.rightTouch = touch.identifier;
-        } else if (x < sw * 0.5 && y < sh * 0.35) {
+        } else if (x < sw * 0.5 && y < sh * 0.3) {
           this.jumpTouch = touch.identifier;
-        } else if (x >= sw * 0.5 && y < sh * 0.5) {
+        } else if (x > sw * 0.65 && y >= sh * 0.55) {
           this.kickTouch = touch.identifier;
+        } else if (x > sw * 0.65 && y >= sh * 0.3 && y < sh * 0.55) {
+          this.defenceTouch = touch.identifier;
         }
       }
       this.fireCallbacksWith(getInput());
     });
 
-    el().addEventListener('touchend', (e) => {
+    const releaseTouch = (e: TouchEvent) => {
       for (const touch of e.changedTouches) {
         if (touch.identifier === this.leftTouch) this.leftTouch = null;
         if (touch.identifier === this.rightTouch) this.rightTouch = null;
         if (touch.identifier === this.jumpTouch) this.jumpTouch = null;
         if (touch.identifier === this.kickTouch) this.kickTouch = null;
+        if (touch.identifier === this.defenceTouch) this.defenceTouch = null;
       }
       this.fireCallbacksWith(getInput());
-    });
+    };
+
+    window.addEventListener('touchend', releaseTouch);
+    window.addEventListener('touchcancel', releaseTouch);
   }
 
   getInput(): HBInput {
@@ -93,6 +103,8 @@ export class HBControls {
       jump: this.keys.has('w') || this.keys.has('W') || this.keys.has('ArrowUp') || this.touchState.jump,
       kick: this.keys.has(' ') || this.touchState.kick,
       kickHold: this.keys.has('s') || this.keys.has('S') || this.keys.has('ArrowDown') || this.touchState.kickHold,
+      superKick: this.keys.has('m') || this.keys.has('M') || this.touchState.superKick,
+      defence: this.touchState.defence,
     };
     return input;
   }

@@ -90,20 +90,13 @@ export function updateBall(ball: HBBallState, players: HBPlayerState[], dt: numb
 }
 
 function checkPlayerCollision(player: HBPlayerState, ball: HBBallState) {
-  const footX = player.x + (player.facingRight ? 8 : -8);
-  const footY = player.y - 2;
-
-  const dx = ball.x - footX;
-  const dy = ball.y - footY;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  const hitDist = ball.radius + 6;
-
   const headCenterX = player.x;
   const headCenterY = player.y - HB_PLAYER.BODY_HEIGHT - player.headSize;
+
   const hdx = ball.x - headCenterX;
   const hdy = ball.y - headCenterY;
   const headDist = Math.sqrt(hdx * hdx + hdy * hdy);
-  const headHitDist = ball.radius + player.headSize;
+  const headHitDist = ball.radius + player.headSize * 1.3;
 
   if (headDist < headHitDist) {
     const overlap = headHitDist - headDist;
@@ -111,25 +104,60 @@ function checkPlayerCollision(player: HBPlayerState, ball: HBBallState) {
       ball.x += (hdx / headDist) * overlap;
       ball.y += (hdy / headDist) * overlap;
     }
+    if (player.isKicking) {
+      ball.lastTouchBy = player.id;
+      ball.lastTouchTeam = player.team;
+      return;
+    }
     const dir = ball.x > player.x ? 1 : -1;
-    ball.vx = dir * 150;
-    ball.vy = -200;
+    const upForce = player.vy < 0 ? Math.abs(player.vy) * 0.4 : 0;
+    ball.vx = dir * 200;
+    ball.vy = -250 - upForce;
     ball.lastTouchBy = player.id;
     ball.lastTouchTeam = player.team;
     return;
   }
 
-  if (dist < hitDist) {
-    const overlap = hitDist - dist;
-    if (dist > 0.001) {
-      ball.x += (dx / dist) * overlap;
-      ball.y += (dy / dist) * overlap;
-    }
+  const bodyLeft = player.x - HB_PLAYER.BODY_WIDTH * 0.8;
+  const bodyRight = player.x + HB_PLAYER.BODY_WIDTH * 0.8;
+  const bodyTop = headCenterY + player.headSize * 0.5;
+  const bodyBottom = player.y - 2;
+  const cx = Math.max(bodyLeft, Math.min(ball.x, bodyRight));
+  const cy = Math.max(bodyTop, Math.min(ball.y, bodyBottom));
+  const bdx = ball.x - cx;
+  const bdy = ball.y - cy;
+  const bodyDist = Math.sqrt(bdx * bdx + bdy * bdy);
 
+  if (bodyDist < ball.radius) {
+    const overlap = ball.radius - bodyDist;
+    if (bodyDist > 0.001) {
+      ball.x += (bdx / bodyDist) * overlap;
+      ball.y += (bdy / bodyDist) * overlap;
+    } else {
+      ball.y -= ball.radius;
+    }
+    const pushDir = ball.x > player.x ? 1 : -1;
+    ball.vx += pushDir * 100;
+    ball.vy = -Math.abs(ball.vy) * 0.3 - 80;
+    ball.lastTouchBy = player.id;
+    ball.lastTouchTeam = player.team;
+    return;
+  }
+
+  const footX = player.x + (player.facingRight ? 8 : -8);
+  const footY = player.y - 2;
+  const fdx = ball.x - footX;
+  const fdy = ball.y - footY;
+  const footDist = Math.sqrt(fdx * fdx + fdy * fdy);
+  const footHitDist = ball.radius + 10;
+
+  if (footDist < footHitDist) {
+    const overlap = footHitDist - footDist;
+    if (footDist > 0.001) {
+      ball.x += (fdx / footDist) * overlap;
+      ball.y += (fdy / footDist) * overlap;
+    }
     if (player.isKicking) {
-      const dir = player.facingRight ? 1 : -1;
-      ball.vx = dir * HB_PLAYER.LOW_KICK_SPEED;
-      ball.vy = -80;
       ball.lastTouchBy = player.id;
       ball.lastTouchTeam = player.team;
     } else {
@@ -142,6 +170,18 @@ function checkPlayerCollision(player: HBPlayerState, ball: HBBallState) {
   }
 }
 
+export function performDefence(player: HBPlayerState, ball: HBBallState) {
+  const dx = Math.abs(player.x - ball.x);
+  const dy = Math.abs((player.y - 15) - ball.y);
+  if (dx > HB_PLAYER.BODY_WIDTH + ball.radius || dy > 40) return;
+  ball.vx *= 0.1;
+  ball.vy = -50;
+  ball.x = player.x + (player.facingRight ? 15 : -15);
+  ball.y = player.y - 22;
+  ball.lastTouchBy = player.id;
+  ball.lastTouchTeam = player.team;
+}
+
 export function performKick(player: HBPlayerState, ball: HBBallState, input: HBInput) {
   if (player.isKicking) return;
 
@@ -149,7 +189,7 @@ export function performKick(player: HBPlayerState, ball: HBBallState, input: HBI
   const dy = (player.y - 10) - ball.y;
   const dist = Math.sqrt(dx * dx + dy * dy);
 
-  if (dist > HB_PLAYER.KICK_RANGE + ball.radius) return;
+  if (dist > HB_PLAYER.KICK_RANGE + ball.radius + 5) return;
 
   player.isKicking = true;
   player.kickTimer = HB_PLAYER.KICK_DURATION;
@@ -168,4 +208,17 @@ export function performKick(player: HBPlayerState, ball: HBBallState, input: HBI
   ball.lastTouchTeam = player.team;
   ball.x = player.x + dir * (HB_PLAYER.KICK_RANGE * 0.5);
   ball.y = player.y - 8;
+}
+
+export function performSuperKick(player: HBPlayerState, ball: HBBallState) {
+  if (player.isGrounded) return;
+  const dir = player.facingRight ? 1 : -1;
+  ball.vx = dir * HB_PLAYER.LOW_KICK_SPEED * 1.3;
+  ball.vy = -400;
+  ball.lastTouchBy = player.id;
+  ball.lastTouchTeam = player.team;
+  ball.x = player.x + dir * (HB_PLAYER.KICK_RANGE * 0.7);
+  ball.y = player.y - player.headSize - 10;
+  player.isKicking = true;
+  player.kickTimer = HB_PLAYER.KICK_DURATION;
 }

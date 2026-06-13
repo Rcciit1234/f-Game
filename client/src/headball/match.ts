@@ -1,5 +1,5 @@
 import { HBPlayerState, HBBallState, HBInput, HBMatchState, HB_FIELD, HB_PLAYER, HB_BALL, HB_MATCH } from '../../../shared/headball.js';
-import { updatePlayer, updateBall, performKick } from './physics.js';
+import { updatePlayer, updateBall, performKick, performSuperKick, performDefence } from './physics.js';
 import { createPlayer } from './player.js';
 
 export class HBMatch {
@@ -70,8 +70,12 @@ export class HBMatch {
     updatePlayer(h, homeInput, dt);
     updatePlayer(a, awayInput, dt);
 
+    if (homeInput.defence) performDefence(h, this.state.ball);
+    if (awayInput.defence) performDefence(a, this.state.ball);
     if (homeInput.kick) performKick(h, this.state.ball, homeInput);
     if (awayInput.kick) performKick(a, this.state.ball, awayInput);
+    if (homeInput.superKick) performSuperKick(h, this.state.ball);
+    if (awayInput.superKick) performSuperKick(a, this.state.ball);
 
     updateBall(this.state.ball, [h, a], dt);
 
@@ -133,7 +137,7 @@ export class HBMatch {
 }
 
 export function getAIInput(player: HBPlayerState, opponent: HBPlayerState, ball: HBBallState): HBInput {
-  const input: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false };
+  const input: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false };
   const isHome = player.team === 'home';
   const myGoalX = isHome ? 0 : HB_FIELD.WIDTH;
   const oppGoalX = isHome ? HB_FIELD.WIDTH : 0;
@@ -142,28 +146,34 @@ export function getAIInput(player: HBPlayerState, opponent: HBPlayerState, ball:
 
   if (ball.lastTouchTeam === player.team || distToBall < 40) {
     const goalDir = oppGoalX > player.x ? 1 : -1;
-    if (oppGoalX > player.x + 10) {
+    if (oppGoalX > player.x + 45 && Math.random() < 0.6) {
       input.right = true;
       player.facingRight = true;
-    } else if (oppGoalX < player.x - 10) {
+    } else if (oppGoalX < player.x - 45 && Math.random() < 0.6) {
       input.left = true;
       player.facingRight = false;
     }
 
-    if (distToBall < HB_PLAYER.KICK_RANGE + HB_BALL.RADIUS + 5) {
+    if (distToBall < HB_PLAYER.KICK_RANGE + HB_BALL.RADIUS + 5 && Math.random() < 0.65) {
       input.kick = true;
       if (ball.y < player.y - 20) input.kickHold = true;
     }
 
-    if (ball.y < player.y - 20 && player.isGrounded && Math.random() < 0.03) {
-      input.jump = true;
+    const ballAbove = ball.y < player.y - 20;
+    const ballClose = Math.abs(ball.x - player.x) < 60;
+    if (ballAbove && player.isGrounded) {
+      if (ballClose) {
+        if (Math.random() < 0.1) input.jump = true;
+      } else if (Math.random() < 0.02) {
+        input.jump = true;
+      }
     }
   } else {
     const dx = ball.x - player.x;
-    if (dx > 5) { input.right = true; player.facingRight = true; }
-    else if (dx < -5) { input.left = true; player.facingRight = false; }
+    if (dx > 25 && Math.random() < 0.7) { input.right = true; player.facingRight = true; }
+    else if (dx < -25 && Math.random() < 0.7) { input.left = true; player.facingRight = false; }
 
-    if (ball.y < player.y - 30 && player.isGrounded) {
+    if (ball.y < player.y - 30 && player.isGrounded && Math.random() < 0.5) {
       input.jump = true;
     }
 

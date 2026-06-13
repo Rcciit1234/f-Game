@@ -41,6 +41,9 @@ export class HBRenderer {
   private kickSparkY = 0;
   private goalParticlesSpawned = false;
   private rain: RainDrop[] = [];
+  private prevHomeScore = 0;
+  private prevAwayScore = 0;
+  private lastScoredBy: 'home' | 'away' | null = null;
 
   constructor(container: HTMLElement) {
     this.canvas = document.createElement('canvas');
@@ -99,6 +102,11 @@ export class HBRenderer {
       if (state.state === 'ended') this.confettiSpawned = false;
     }
 
+    if (state.homeScore > this.prevHomeScore) this.lastScoredBy = 'home';
+    if (state.awayScore > this.prevAwayScore) this.lastScoredBy = 'away';
+    this.prevHomeScore = state.homeScore;
+    this.prevAwayScore = state.awayScore;
+
     ctx.clearRect(0, 0, w, h);
 
     ctx.save();
@@ -118,8 +126,8 @@ export class HBRenderer {
     this.drawShadow(ctx, state.ball.x, state.ball.y, state.ball.radius * 0.6);
 
     this.drawBall(ctx, state.ball);
-    if (state.homePlayer) this.drawPlayer(ctx, state.homePlayer, false);
-    if (state.awayPlayer) this.drawPlayer(ctx, state.awayPlayer, true);
+    if (state.homePlayer) this.drawPlayer(ctx, state.homePlayer, false, state.ball, state);
+    if (state.awayPlayer) this.drawPlayer(ctx, state.awayPlayer, true, state.ball, state);
     this.drawScoreboard(ctx, state);
 
     ctx.restore();
@@ -168,41 +176,230 @@ export class HBRenderer {
       ctx.arc(star.x, star.y, r, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Sweeping floodlight beams
+    ctx.save();
+    const lightPoles = [
+      { x: 120, targetAngle: 0.08, phase: 0 },
+      { x: HB_FIELD.WIDTH - 120, targetAngle: -0.08, phase: Math.PI }
+    ];
+    for (const pole of lightPoles) {
+      const sweep = Math.sin(this.time * 0.45 + pole.phase) * 0.28;
+      const angle = Math.PI / 2 + pole.targetAngle + sweep;
+      
+      // Draw floodlight bulb glow
+      ctx.fillStyle = '#ffffff';
+      ctx.shadowColor = '#ffffff';
+      ctx.shadowBlur = 10;
+      ctx.beginPath();
+      ctx.arc(pole.x, 30, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.shadowBlur = 0;
+      
+      // Beam cone
+      const beamLen = 340;
+      const beamEndWidth = 85;
+      const endX = pole.x + Math.cos(angle) * beamLen;
+      const endY = 30 + Math.sin(angle) * beamLen;
+      const dx = Math.cos(angle + Math.PI / 2) * beamEndWidth;
+      const dy = Math.sin(angle + Math.PI / 2) * beamEndWidth;
+      
+      const lightGrad = ctx.createLinearGradient(pole.x, 30, endX, endY);
+      lightGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
+      lightGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.08)');
+      lightGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = lightGrad;
+      
+      ctx.beginPath();
+      ctx.moveTo(pole.x, 30);
+      ctx.lineTo(endX - dx, endY - dy);
+      ctx.lineTo(endX + dx, endY + dy);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
   }
 
   private drawStands(ctx: CanvasRenderingContext2D, state: HBMatchState) {
-    const standW = 50;
-    const standH = 90;
-    const baseY = HB_FIELD.GOAL_Y - standH + 10;
     const isGoal = state.state === 'goal_scored';
     const goalElapsed = isGoal ? this.time - this.stateEntryTime : 0;
-    const crowdReact = isGoal ? Math.max(0, 1 - goalElapsed / 0.8) : 0;
+    const ready = isGoal ? Math.min(1, Math.max(0,
+      goalElapsed < 0.3 ? goalElapsed / 0.3 :
+      goalElapsed < 1.7 ? 1 :
+      (2.0 - goalElapsed) / 0.3
+    )) : 0;
 
-    for (const side of [-1, 1]) {
-      const sx = side > 0 ? HB_FIELD.WIDTH - standW / 2 - 5 : -standW / 2 + 5;
+    // Draw full background seating bowl
+    const standsGrad = ctx.createLinearGradient(0, 70, 0, 328);
+    standsGrad.addColorStop(0, '#070a14');
+    standsGrad.addColorStop(0.4, '#10152b');
+    standsGrad.addColorStop(1, '#151d38');
+    ctx.fillStyle = standsGrad;
+    ctx.fillRect(0, 70, HB_FIELD.WIDTH, 258);
 
-      const grad = ctx.createLinearGradient(sx, baseY, sx, baseY + standH);
-      grad.addColorStop(0, '#16213e');
-      grad.addColorStop(1, '#1a1a2e');
-      ctx.fillStyle = grad;
-      ctx.fillRect(sx, baseY, standW, standH);
+    // Draw tier rails
+    ctx.strokeStyle = '#22304d';
+    ctx.lineWidth = 1.5;
+    for (let r = 0; r < 5; r++) {
+      const ry = 100 + r * 44;
+      ctx.beginPath();
+      ctx.moveTo(0, ry);
+      ctx.lineTo(HB_FIELD.WIDTH, ry);
+      ctx.stroke();
+    }
 
-      ctx.fillStyle = 'rgba(15,52,96,0.25)';
-      ctx.fillRect(sx - 5, baseY, standW + 10, 6);
+    // Populate fans in a nice crowd
+    const cols = 22;
+    const rows = 5;
+    for (let r = 0; r < rows; r++) {
+      const fy = 100 + r * 44 + 32; // Seat bottom
+      for (let c = 0; c < cols; c++) {
+        const fx = 30 + c * (HB_FIELD.WIDTH - 60) / (cols - 1) + (r % 2) * 6;
+        
+        // Split crowd cheering based on who scored
+        const isLeftSide = fx < HB_FIELD.WIDTH / 2;
+        const celebrate = isGoal && ready > 0 &&
+          ((isLeftSide && this.lastScoredBy === 'home') || (!isLeftSide && this.lastScoredBy === 'away'));
+        const sad = isGoal && ready > 0 &&
+          ((isLeftSide && this.lastScoredBy === 'away') || (!isLeftSide && this.lastScoredBy === 'home'));
 
-      const crowdColors = ['#2a2a3e', '#1e2a4e', '#3a1a2e', '#2a3a1e', '#2a2a2a', '#1e3a4e'];
-      for (let row = 0; row < 6; row++) {
-        const ry = baseY + standH - 8 - row * 13;
-        const offset = (row % 2) * 2;
-        for (let col = 0; col < 10; col++) {
-          if (crowdReact > 0 && (row * 10 + col + Math.floor(this.stateEntryTime * 10)) % 3 === 0) {
-            ctx.fillStyle = `rgba(0,240,255,${crowdReact * 0.6})`;
-          } else {
-            ctx.fillStyle = crowdColors[(row + col) % crowdColors.length];
-          }
-          ctx.fillRect(sx + 4 + col * 4 + offset, ry, 2, 3);
+        let bob = Math.sin(this.time * 6 + c * 0.4 + r) * 1.5;
+        if (celebrate) {
+          bob = Math.sin(this.time * 16 + c * 1.2) * 5 - 4;
+        } else if (sad) {
+          bob = Math.sin(this.time * 2 + c) * 0.3 + 1.5; // low bobbing / sad
+        }
+
+        // Draw Fan Shirt
+        const teamColor = isLeftSide ? '#2563eb' : '#dc2626';
+        ctx.fillStyle = teamColor;
+        ctx.beginPath();
+        ctx.roundRect(fx - 7, fy - 12 + bob, 14, 12, 3);
+        ctx.fill();
+
+        // Draw Fan Face
+        ctx.fillStyle = '#f0c8a0';
+        ctx.beginPath();
+        ctx.arc(fx, fy - 16 + bob, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Draw Fan Hat/Hair (some fans wear caps)
+        if ((c + r) % 3 === 0) {
+          // Hat
+          ctx.fillStyle = teamColor;
+          ctx.beginPath();
+          ctx.ellipse(fx, fy - 19 + bob, 5, 2.5, 0, Math.PI, 0);
+          ctx.fill();
+          // Hat bill/brim
+          ctx.fillRect(fx - 4, fy - 19 + bob, 8, 1);
+        } else {
+          // Hair
+          ctx.fillStyle = ['#332211', '#111111', '#c0a080', '#664422'][Math.floor((c + r) % 4)];
+          ctx.beginPath();
+          ctx.ellipse(fx, fy - 18.5 + bob, 4.5, 2, 0, Math.PI, 0);
+          ctx.fill();
+        }
+
+        // Celebrate: wave arms up!
+        if (celebrate) {
+          ctx.strokeStyle = '#f0c8a0';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(fx - 6, fy - 10 + bob);
+          ctx.lineTo(fx - 11, fy - 18 + bob);
+          ctx.moveTo(fx + 6, fy - 10 + bob);
+          ctx.lineTo(fx + 11, fy - 18 + bob);
+          ctx.stroke();
+        }
+
+        // A few fans wave flags
+        if ((c === 3 || c === 9 || c === 13 || c === 18) && r === 0) {
+          ctx.save();
+          ctx.translate(fx, fy - 22 + bob);
+          const flagWave = Math.sin(this.time * 8 + c) * 0.25;
+          ctx.rotate(flagWave);
+          
+          // Flag pole
+          ctx.strokeStyle = '#888';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, 0);
+          ctx.lineTo(0, -18);
+          ctx.stroke();
+          
+          // Flag banner
+          ctx.fillStyle = teamColor;
+          ctx.beginPath();
+          ctx.moveTo(0, -18);
+          ctx.lineTo(15, -18 + Math.sin(this.time * 10) * 1.5);
+          ctx.lineTo(12, -10 + Math.sin(this.time * 10 + 1) * 1.5);
+          ctx.lineTo(0, -10);
+          ctx.closePath();
+          ctx.fill();
+          ctx.restore();
         }
       }
+    }
+
+    // Camera flashes popping in the stands
+    if (Math.random() < 0.12) {
+      const flashCol = Math.floor(Math.random() * cols);
+      const flashRow = Math.floor(Math.random() * rows);
+      const flashX = 30 + flashCol * (HB_FIELD.WIDTH - 60) / (cols - 1) + (Math.random() - 0.5) * 12;
+      const flashY = 100 + flashRow * 44 + 16;
+      
+      ctx.save();
+      const flashGrad = ctx.createRadialGradient(flashX, flashY, 1, flashX, flashY, 20);
+      flashGrad.addColorStop(0, '#ffffff');
+      flashGrad.addColorStop(0.2, 'rgba(255, 245, 170, 0.95)');
+      flashGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+      ctx.fillStyle = flashGrad;
+      ctx.beginPath();
+      ctx.arc(flashX, flashY, 20, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Star flare lines
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(flashX - 14, flashY); ctx.lineTo(flashX + 14, flashY);
+      ctx.moveTo(flashX, flashY - 14); ctx.lineTo(flashX, flashY + 14);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Draw scrolling LED Advertisement Board above the field boundary
+    ctx.fillStyle = '#060912';
+    ctx.fillRect(0, 328, HB_FIELD.WIDTH, 18);
+    ctx.strokeStyle = '#1d273d';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(0, 328, HB_FIELD.WIDTH, 18);
+    
+    // Led Text
+    ctx.fillStyle = '#00f0ff';
+    ctx.font = 'bold 9px monospace';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    
+    const text = "★ HEAD BALL PRO ★ SCORE GOALS ★ DEFEAT THE OPPONENT ★ PLAY MULTIPLAYER ONLINE ★ TOUCH CONTROLS ON MOBILE ★";
+    const textWidth = ctx.measureText(text).width;
+    const scrollSpeed = 50; // pixels per second
+    const offset = (this.time * scrollSpeed) % (textWidth + HB_FIELD.WIDTH);
+    const textX = HB_FIELD.WIDTH - offset;
+    ctx.fillText(text, textX, 337);
+    if (textX + textWidth < HB_FIELD.WIDTH) {
+      ctx.fillText(text, textX + textWidth + 100, 337);
+    }
+
+    // Goal scored notification text
+    if (isGoal && ready > 0.5) {
+      ctx.save();
+      ctx.globalAlpha = (ready - 0.5) * 2;
+      ctx.fillStyle = '#ffdd00';
+      ctx.font = 'bold 18px Rajdhani, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('⚽ GOAL!', HB_FIELD.WIDTH / 2, 90 + Math.sin(this.time * 8) * 3);
+      ctx.restore();
     }
   }
 
@@ -302,99 +499,272 @@ export class HBRenderer {
     }
   }
 
-  private drawPlayer(ctx: CanvasRenderingContext2D, player: HBPlayerState, isAway: boolean) {
+  private drawPlayer(ctx: CanvasRenderingContext2D, player: HBPlayerState, isAway: boolean, ball: HBBallState, state: HBMatchState) {
     const x = player.x;
     const y = player.y;
     const hr = player.headSize;
-    const bodyBot = y;
     const dir = player.facingRight ? 1 : -1;
 
-    ctx.save();
-    ctx.translate(x, bodyBot);
+    // Head center in local coords is at y-offset = -BODY_HEIGHT - headSize
+    const headY = -HB_PLAYER.BODY_HEIGHT - hr;
 
+    // Squash & Stretch based on vertical velocity (vy)
+    let scaleY = 1;
+    if (!player.isGrounded) {
+      scaleY = 1 + Math.max(-0.15, Math.min(0.15, player.vy * 0.0004));
+    }
+    const scaleX = 1 / scaleY;
+
+    ctx.save();
+    ctx.translate(x, y);
+
+    // --- 1. RENDER KICK / SPEED TRAILS ---
     if (Math.abs(player.vx) > 30) {
-      const speedAlpha = Math.min(0.25, Math.abs(player.vx) / 600);
+      const speedAlpha = Math.min(0.2, Math.abs(player.vx) / 600);
       ctx.strokeStyle = `rgba(255,255,255,${speedAlpha})`;
       ctx.lineWidth = 1.5;
       for (let i = 0; i < 3; i++) {
-        const ly = -10 + i * 8;
+        const ly = -12 + i * 8;
         ctx.beginPath();
         ctx.moveTo(0, ly);
-        ctx.lineTo(-dir * (12 + Math.abs(player.vx) * 0.04), ly);
+        ctx.lineTo(-dir * (15 + Math.abs(player.vx) * 0.04), ly);
         ctx.stroke();
       }
     }
 
     if (player.isKicking) {
       const kickProgress = 1 - player.kickTimer / HB_PLAYER.KICK_DURATION;
-      const sparkR = 6 + kickProgress * 12;
-      const sparkAlpha = 0.4 * (1 - kickProgress);
+      const sparkR = 7 + kickProgress * 14;
+      const sparkAlpha = 0.45 * (1 - kickProgress);
       ctx.strokeStyle = `rgba(255,255,255,${sparkAlpha})`;
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.arc(dir * 16, -10, sparkR, 0, Math.PI * 2);
+      ctx.arc(dir * 18, -12, sparkR, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    const legAnim = Math.sin(player.animFrame) * 6;
+    // --- 2. RENDER THE DETAILED SNEAKER / SHOE ---
+    const footBaseX = dir * 8;
+    const footBaseY = -6;
 
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(-HB_PLAYER.BODY_WIDTH / 3, -6 + legAnim, 4, HB_PLAYER.LEG_LENGTH);
-    ctx.fillRect(HB_PLAYER.BODY_WIDTH / 3 - 4, -6 - legAnim, 4, HB_PLAYER.LEG_LENGTH);
+    let shoeX = footBaseX;
+    let shoeY = footBaseY;
+    let shoeRot = 0;
 
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(-HB_PLAYER.BODY_WIDTH / 3, -6 + legAnim + HB_PLAYER.LEG_LENGTH - 3, 4, 3);
-    ctx.fillRect(HB_PLAYER.BODY_WIDTH / 3 - 4, -6 - legAnim + HB_PLAYER.LEG_LENGTH - 3, 4, 3);
+    if (player.isKicking) {
+      const kickProgress = 1 - player.kickTimer / HB_PLAYER.KICK_DURATION;
+      const swingFactor = Math.sin(kickProgress * Math.PI);
+      shoeX += dir * swingFactor * 24;
+      shoeY -= swingFactor * 15;
+      shoeRot = -dir * swingFactor * 1.5;
+    } else if (Math.abs(player.vx) > 10) {
+      // Walking bob cycle
+      const cycle = player.animFrame * 1.5;
+      shoeX += Math.sin(cycle) * 5;
+      shoeY += Math.abs(Math.cos(cycle)) * -6;
+      shoeRot = Math.sin(cycle) * 0.18 * dir;
+    } else {
+      // Idle bobbing matching the head
+      shoeY += Math.sin(this.time * 6) * 1;
+    }
 
+    ctx.save();
+    ctx.translate(shoeX, shoeY);
+    ctx.rotate(shoeRot);
+    ctx.scale(dir, 1);
+
+    // Sole (white/gray highlight)
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.roundRect(-14, 2, 28, 4, 2);
+    ctx.fill();
+
+    // Studs / Cleats (red/orange accents)
+    ctx.fillStyle = '#e11d48';
+    ctx.fillRect(-10, 6, 2, 2);
+    ctx.fillRect(-4, 6, 2, 2);
+    ctx.fillRect(4, 6, 2, 2);
+    ctx.fillRect(8, 6, 2, 2);
+
+    // Cleat Body (team colored)
     ctx.fillStyle = player.jerseyColor;
-    ctx.fillRect(-HB_PLAYER.BODY_WIDTH / 2, -HB_PLAYER.BODY_HEIGHT, HB_PLAYER.BODY_WIDTH, HB_PLAYER.BODY_HEIGHT);
-
-    ctx.fillStyle = '#f0d0b0';
-    ctx.fillRect(-HB_PLAYER.BODY_WIDTH / 2 - 2, -HB_PLAYER.BODY_HEIGHT + 6, 4, 8);
-    ctx.fillRect(HB_PLAYER.BODY_WIDTH / 2 - 2, -HB_PLAYER.BODY_HEIGHT + 6, 4, 8);
-
-    const kickSwing = player.isKicking ? dir * 8 : 0;
-    ctx.fillStyle = '#1a1a1a';
-    ctx.fillRect(dir * (HB_PLAYER.BODY_WIDTH / 2) + kickSwing - 2, -HB_PLAYER.BODY_HEIGHT + 6, 4, 6);
-
-    ctx.translate(0, -HB_PLAYER.BODY_HEIGHT - hr);
-
-    ctx.fillStyle = player.skinColor;
     ctx.beginPath();
-    ctx.arc(0, 0, hr, 0, Math.PI * 2);
+    ctx.moveTo(-14, 2);
+    ctx.lineTo(-14, -6);
+    ctx.quadraticCurveTo(-10, -10, -2, -8);
+    ctx.lineTo(8, -8);
+    ctx.quadraticCurveTo(14, -6, 14, 2);
+    ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = player.hairColor;
+    // Sneaker Toe Cap (white highlight)
+    ctx.fillStyle = '#ffffff';
     ctx.beginPath();
-    ctx.ellipse(0, -hr * 0.2, hr * 0.95, hr * 0.55, 0, Math.PI, 0);
+    ctx.moveTo(8, -8);
+    ctx.quadraticCurveTo(14, -6, 14, 2);
+    ctx.lineTo(8, 2);
+    ctx.closePath();
     ctx.fill();
 
-    ctx.fillStyle = '#fff';
+    // Cleat Laces details
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.5;
     ctx.beginPath();
-    ctx.ellipse(dir * 5, -2, 5, 6, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(dir * 5 - 2, -2, 4, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = '#222';
-    ctx.beginPath();
-    ctx.arc(dir * 5 + 1, -1, 2, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.strokeStyle = '#c97a5a';
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.arc(dir * 4, 3, 3, 0.1, Math.PI - 0.1);
+    ctx.moveTo(-2, -6); ctx.lineTo(2, -8);
+    ctx.moveTo(-1, -4); ctx.lineTo(3, -6);
+    ctx.moveTo(0, -2); ctx.lineTo(4, -4);
     ctx.stroke();
 
-    ctx.fillStyle = player.jerseyColor;
-    ctx.font = `bold ${hr * 0.7}px sans-serif`;
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(player.name.charAt(0).toUpperCase(), 0, -hr * 0.5);
+    // Heel patch (dark charcoal)
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.moveTo(-14, 2);
+    ctx.lineTo(-14, -4);
+    ctx.lineTo(-8, 2);
+    ctx.closePath();
+    ctx.fill();
 
     ctx.restore();
+
+    // --- 3. RENDER THE GIANT HEAD (with Squash & Stretch) ---
+    ctx.save();
+    ctx.scale(scaleX, scaleY);
+
+    // Skin Head
+    ctx.fillStyle = player.skinColor;
+    ctx.beginPath();
+    ctx.arc(0, headY, hr * 1.35, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Team jersey collar at bottom of head
+    ctx.fillStyle = player.jerseyColor;
+    ctx.beginPath();
+    ctx.ellipse(0, headY + hr * 1.15, hr * 0.7, hr * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.beginPath();
+    ctx.moveTo(-hr * 0.3, headY + hr * 1.05);
+    ctx.lineTo(0, headY + hr * 1.35);
+    ctx.lineTo(hr * 0.3, headY + hr * 1.05);
+    ctx.closePath();
+    ctx.fill();
+
+    // Hair
+    ctx.fillStyle = player.hairColor;
+    ctx.beginPath();
+    ctx.arc(0, headY - hr * 0.35, hr * 1.4, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.ellipse(0, headY - hr * 0.85, hr * 1.35, hr * 0.7, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes (with random blinking cycle)
+    const eyeX = dir * 9;
+    const eyeY = headY - 1;
+    const blinkPeriod = 4.0;
+    const blinkDuration = 0.15;
+    const offset = isAway ? 2.0 : 0;
+    const isBlinking = ((this.time + offset) % blinkPeriod) < blinkDuration;
+
+    if (isBlinking) {
+      // Draw closed blinking line
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(eyeX - 7, eyeY);
+      ctx.lineTo(eyeX + 7, eyeY);
+      ctx.stroke();
+    } else {
+      // Open eye whites
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.ellipse(eyeX, eyeY, 8.5, 10.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#111111';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      // Look at the ball direction
+      const dx = ball.x - (player.x + eyeX);
+      const dy = ball.y - (player.y + eyeY);
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      let lookX = 0;
+      let lookY = 0;
+      if (dist > 5) {
+        lookX = (dx / dist) * 3;
+        lookY = (dy / dist) * 3;
+      }
+      
+      // Pupils
+      ctx.fillStyle = '#111111';
+      ctx.beginPath();
+      ctx.arc(eyeX + lookX, eyeY + lookY, 3.8, 0, Math.PI * 2);
+      ctx.fill();
+      
+      // Reflection glow dot
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(eyeX + lookX - 1.2, eyeY + lookY - 1.2, 1.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // Eyebrows
+    ctx.strokeStyle = player.hairColor;
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(eyeX - 9, eyeY - 13);
+    ctx.lineTo(eyeX + 6, eyeY - 12);
+    ctx.stroke();
+
+    // Mouth Expression
+    const isCelebrating = state.state === 'goal_scored' && this.lastScoredBy === player.team;
+    const isSad = state.state === 'goal_scored' && this.lastScoredBy !== player.team;
+
+    ctx.save();
+    ctx.translate(dir * 13, headY + 15);
+    if (isCelebrating) {
+      // Happy open smile
+      ctx.fillStyle = '#b91c1c';
+      ctx.beginPath();
+      ctx.arc(0, 0, 8, 0, Math.PI);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-5, 0, 10, 2);
+    } else if (isSad) {
+      // Frown
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, 4, 6, Math.PI, 0);
+      ctx.stroke();
+    } else {
+      // Determined line smile
+      ctx.strokeStyle = '#111';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(0, -2, 6, 0.2, Math.PI - 0.2);
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Headband with the player's capital initial
+    ctx.fillStyle = player.jerseyColor;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - 15, hr * 1.34, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.45)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.ellipse(0, headY - 15, hr * 1.34, 5.5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = `bold ${hr * 0.7}px Rajdhani, sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(player.name.charAt(0).toUpperCase(), 0, headY - 15);
+
+    ctx.restore(); // restore Squash & Stretch scale
+
+    ctx.restore(); // restore player translation
   }
 
   private drawBall(ctx: CanvasRenderingContext2D, ball: HBBallState) {
@@ -762,6 +1132,7 @@ export class HBRenderer {
 
     const kickPulse = 1 + 0.05 * Math.sin(this.time * 3);
     const jumpPulse = 1 + 0.04 * Math.sin(this.time * 2.5 + 1);
+    const defPulse = 1 + 0.04 * Math.sin(this.time * 2.8 + 2);
 
     ctx.globalAlpha = 0.25;
 
@@ -798,6 +1169,24 @@ export class HBRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('⚽', kickX, kickY);
+
+    const defX = w - pad - btnR;
+    const defY = h - pad - btnR - btnR * 2.4;
+    ctx.fillStyle = '#3b82f6';
+    ctx.globalAlpha = 0.3;
+    ctx.save();
+    ctx.translate(defX, defY);
+    ctx.scale(defPulse, defPulse);
+    ctx.beginPath();
+    ctx.arc(0, 0, btnR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+    ctx.globalAlpha = 0.25;
+    ctx.fillStyle = '#fff';
+    ctx.font = `${16 * this.scale}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⬇', defX, defY);
 
     const jumpX = w / 2;
     const jumpY = pad + btnR;
