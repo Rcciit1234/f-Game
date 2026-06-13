@@ -461,6 +461,7 @@ export class HBRenderer {
     const goalH = HB_FIELD.GOAL_HEIGHT;
     const goalY = HB_FIELD.GOAL_Y;
     const depth = HB_FIELD.GOAL_DEPTH;
+    const groundY = HB_FIELD.GROUND_Y;
     const isGoal = state.state === 'goal_scored';
     const goalElapsed = isGoal ? this.time - this.stateEntryTime : 0;
     const ripple = isGoal
@@ -474,145 +475,122 @@ export class HBRenderer {
       const insideDir = side > 0 ? -1 : 1;
       const glowColor = side > 0 ? COLORS.goalGlowAway : COLORS.goalGlowHome;
 
-      // 1. Goal glow behind net
       ctx.fillStyle = glowColor;
       ctx.fillRect(Math.min(frontX, backX), goalY, depth, goalH);
 
-      // 2. Ground shadows for posts
-      ctx.fillStyle = 'rgba(0,0,0,0.1)';
-      ctx.beginPath(); ctx.ellipse(frontX, HB_FIELD.GROUND_Y + 2, 9, 3, 0, 0, Math.PI * 2); ctx.fill();
-      ctx.beginPath(); ctx.ellipse(backX, HB_FIELD.GROUND_Y + 2, 6, 2, 0, 0, Math.PI * 2); ctx.fill();
+      // Ground shadows
+      ctx.fillStyle = 'rgba(0,0,0,0.12)';
+      ctx.beginPath(); ctx.ellipse(frontX, groundY + 2, postW, 3, 0, 0, Math.PI * 2); ctx.fill();
+      ctx.beginPath(); ctx.ellipse(backX, groundY + 2, postW * 0.7, 2, 0, 0, Math.PI * 2); ctx.fill();
 
-      // 3. Net — back layer (darker)
-      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
-      ctx.lineWidth = 0.5;
-      const netHCount = 12;
-      for (let i = 0; i <= netHCount; i++) {
-        const t = i / netHCount;
-        const y = goalY + t * goalH;
-        ctx.beginPath();
-        ctx.moveTo(frontX, y);
-        ctx.lineTo(backX, y);
-        ctx.stroke();
-      }
-
-      // Net — front layer (brighter, with ripple)
-      ctx.strokeStyle = `rgba(255,255,255,${0.08 + (isGoal ? 0.05 : 0)})`;
-      ctx.lineWidth = 0.6;
-      for (let i = 0; i <= netHCount; i++) {
-        const t = i / netHCount;
-        const ripp = ripple * Math.sin(t * Math.PI * 3 + 0.5);
-        const y = goalY + t * goalH;
-        ctx.beginPath();
-        ctx.moveTo(frontX + ripp, y);
-        ctx.lineTo(backX + ripp, y);
-        ctx.stroke();
-      }
-
-      const netVCount = 8;
-      ctx.strokeStyle = `rgba(255,255,255,${0.07 + (isGoal ? 0.04 : 0)})`;
-      for (let i = 1; i < netVCount; i++) {
-        const t = i / netVCount;
-        const ripp = ripple * Math.sin(t * Math.PI * 2.5);
-        const x = frontX + (backX - frontX) * t + ripp;
-        ctx.beginPath();
-        ctx.moveTo(x, goalY);
-        ctx.lineTo(x, goalY + goalH);
-        ctx.stroke();
-      }
-
-      // 4. Back post (darker, thinner, behind net)
+      // --- BACK POST (behind net) ---
       const bpw = postW * 0.65;
-      ctx.fillStyle = '#b0b0b0';
+      const bpg = ctx.createLinearGradient(backX - bpw / 2, 0, backX + bpw / 2, 0);
+      bpg.addColorStop(0, '#888'); bpg.addColorStop(0.3, '#bbb');
+      bpg.addColorStop(0.7, '#bbb'); bpg.addColorStop(1, '#888');
+      ctx.fillStyle = bpg;
       ctx.beginPath();
       ctx.roundRect(backX - bpw / 2, goalY, bpw, goalH, bpw / 3);
       ctx.fill();
-      ctx.strokeStyle = 'rgba(160,160,160,0.6)';
-      ctx.lineWidth = 0.5;
-      ctx.stroke();
 
-      // 5. Front post — cylindrical 3D gradient
+      // --- NET ---
+      ctx.strokeStyle = 'rgba(255,255,255,0.04)';
+      ctx.lineWidth = 0.5;
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12, y = goalY + t * goalH;
+        ctx.beginPath(); ctx.moveTo(frontX, y); ctx.lineTo(backX, y); ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${0.09 + (isGoal ? 0.05 : 0)})`;
+      ctx.lineWidth = 0.6;
+      for (let i = 0; i <= 12; i++) {
+        const t = i / 12, rp = ripple * Math.sin(t * Math.PI * 3 + 0.5);
+        const y = goalY + t * goalH;
+        ctx.beginPath(); ctx.moveTo(frontX + rp, y); ctx.lineTo(backX + rp, y); ctx.stroke();
+      }
+      ctx.strokeStyle = `rgba(255,255,255,${0.07 + (isGoal ? 0.04 : 0)})`;
+      for (let i = 1; i < 8; i++) {
+        const t = i / 8, rp = ripple * Math.sin(t * Math.PI * 2.5);
+        const x = frontX + (backX - frontX) * t + rp;
+        ctx.beginPath(); ctx.moveTo(x, goalY); ctx.lineTo(x, goalY + goalH); ctx.stroke();
+      }
+
+      // --- FRONT POST (full cylinder) ---
       const fpGrad = ctx.createLinearGradient(frontX - postW / 2, 0, frontX + postW / 2, 0);
-      fpGrad.addColorStop(0, '#b0b0b0');
-      fpGrad.addColorStop(0.2, '#e8e8e8');
-      fpGrad.addColorStop(0.4, '#ffffff');
-      fpGrad.addColorStop(0.6, '#ffffff');
-      fpGrad.addColorStop(0.8, '#e0e0e0');
-      fpGrad.addColorStop(1, '#b8b8b8');
+      fpGrad.addColorStop(0, '#999'); fpGrad.addColorStop(0.15, '#ddd');
+      fpGrad.addColorStop(0.35, '#fff'); fpGrad.addColorStop(0.65, '#fff');
+      fpGrad.addColorStop(0.85, '#e0e0e0'); fpGrad.addColorStop(1, '#aaa');
       ctx.fillStyle = fpGrad;
       ctx.beginPath();
       ctx.roundRect(frontX - postW / 2, goalY, postW, goalH, postW / 3);
       ctx.fill();
 
-      // Front post outline
-      ctx.strokeStyle = 'rgba(180,180,180,0.5)';
+      ctx.strokeStyle = 'rgba(180,180,180,0.4)';
       ctx.lineWidth = 0.5;
       ctx.beginPath();
       ctx.roundRect(frontX - postW / 2, goalY, postW, goalH, postW / 3);
       ctx.stroke();
 
-      // Front post specular highlight (inside edge)
-      ctx.strokeStyle = 'rgba(255,255,255,0.7)';
-      ctx.lineWidth = 1.2;
+      // Inside-edge highlight
+      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+      ctx.lineWidth = 1.5;
       const hlX = insideDir > 0 ? frontX + postW / 2 - 2 : frontX - postW / 2 + 2;
       ctx.beginPath();
-      ctx.moveTo(hlX, goalY + 3);
-      ctx.lineTo(hlX, goalY + goalH - 3);
+      ctx.moveTo(hlX, goalY + 3); ctx.lineTo(hlX, goalY + goalH - 3);
       ctx.stroke();
 
-      // 6. Crossbar — cylindrical 3D gradient
-      const cbX1 = frontX;
-      const cbX2 = backX;
-      const cbGrad = ctx.createLinearGradient(0, goalY, 0, goalY + postW);
-      cbGrad.addColorStop(0, '#ffffff');
-      cbGrad.addColorStop(0.25, '#f0f0f0');
-      cbGrad.addColorStop(0.5, '#e0e0e0');
-      cbGrad.addColorStop(0.75, '#d0d0d0');
-      cbGrad.addColorStop(1, '#b0b0b0');
+      // --- CROSSBAR (sits ON TOP of posts, real cylinder) ---
+      const cbTop = goalY - postW;
+      const cbBot = goalY;
+      const cbMidY = goalY - postW / 2;
+      const cbMinX = Math.min(frontX, backX);
+      const cbMaxX = Math.max(frontX, backX);
+
+      const cbGrad = ctx.createLinearGradient(0, cbTop, 0, cbBot);
+      cbGrad.addColorStop(0, '#fff'); cbGrad.addColorStop(0.2, '#f5f5f5');
+      cbGrad.addColorStop(0.5, '#e8e8e8'); cbGrad.addColorStop(0.8, '#ccc');
+      cbGrad.addColorStop(1, '#aaa');
       ctx.fillStyle = cbGrad;
-      ctx.beginPath();
-      ctx.roundRect(Math.min(cbX1, cbX2), goalY - postW / 2, depth, postW, postW / 3);
-      ctx.fill();
 
-      ctx.strokeStyle = 'rgba(180,180,180,0.5)';
-      ctx.lineWidth = 0.5;
+      // Single pill-shaped path (rectangle + arc ends)
       ctx.beginPath();
-      ctx.roundRect(Math.min(cbX1, cbX2), goalY - postW / 2, depth, postW, postW / 3);
-      ctx.stroke();
-
-      // Crossbar specular highlight (inside edge)
-      ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-      ctx.lineWidth = 1.2;
-      const cbHighlightY = goalY - postW / 2 + 2;
-      ctx.beginPath();
-      ctx.moveTo(insideDir > 0 ? frontX - postW / 2 : frontX + postW / 2, cbHighlightY);
-      ctx.lineTo(insideDir > 0 ? backX - postW / 2 : backX + postW / 2, cbHighlightY);
-      ctx.stroke();
-
-      // 7. Post caps (top corners)
-      ctx.fillStyle = '#e8e8e8';
-      ctx.strokeStyle = 'rgba(180,180,180,0.6)';
-      ctx.lineWidth = 0.5;
-      const capR = postW * 0.5;
-      for (const px of [frontX, backX]) {
-        ctx.beginPath();
-        ctx.arc(px, goalY, capR, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-      }
-
-      // 8. Ground anchor triangles at base of front post
-      ctx.fillStyle = '#d0d0d0';
-      ctx.strokeStyle = 'rgba(160,160,160,0.4)';
-      ctx.lineWidth = 0.5;
-      const anchorW = postW * 0.8;
-      ctx.beginPath();
-      ctx.moveTo(frontX - anchorW, HB_FIELD.GROUND_Y);
-      ctx.lineTo(frontX, goalY + goalH + 2);
-      ctx.lineTo(frontX + anchorW, HB_FIELD.GROUND_Y);
+      ctx.moveTo(cbMinX, cbTop);
+      ctx.lineTo(cbMaxX, cbTop);
+      ctx.arc(cbMaxX, cbMidY, postW / 2, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(cbMinX, cbBot);
+      ctx.arc(cbMinX, cbMidY, postW / 2, Math.PI / 2, -Math.PI / 2, true);
       ctx.closePath();
       ctx.fill();
+
+      ctx.strokeStyle = 'rgba(180,180,180,0.4)';
+      ctx.lineWidth = 0.5;
+      ctx.beginPath();
+      ctx.moveTo(cbMinX, cbTop);
+      ctx.lineTo(cbMaxX, cbTop);
+      ctx.arc(cbMaxX, cbMidY, postW / 2, -Math.PI / 2, Math.PI / 2);
+      ctx.lineTo(cbMinX, cbBot);
+      ctx.arc(cbMinX, cbMidY, postW / 2, Math.PI / 2, -Math.PI / 2, true);
+      ctx.closePath();
       ctx.stroke();
+
+      // Crossbar top highlight
+      ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(cbMinX, cbTop + 2);
+      ctx.lineTo(cbMaxX, cbTop + 2);
+      ctx.stroke();
+
+      // Ground anchors at base of each post
+      ctx.fillStyle = 'rgba(200,200,200,0.4)';
+      const aw = postW * 0.5;
+      for (const px of [frontX, backX]) {
+        ctx.beginPath();
+        ctx.moveTo(px - aw, groundY);
+        ctx.lineTo(px, goalY + goalH - 2);
+        ctx.lineTo(px + aw, groundY);
+        ctx.closePath();
+        ctx.fill();
+      }
     }
   }
 

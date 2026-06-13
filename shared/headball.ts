@@ -59,7 +59,7 @@ export const HB_FIELD = {
   GOAL_HEIGHT: 100,
   GOAL_Y: 250,
   GOAL_DEPTH: 30,
-  GOAL_POST_RADIUS: 4,
+  GOAL_POST_RADIUS: 6,
 } as const;
 
 export const HB_PLAYER = {
