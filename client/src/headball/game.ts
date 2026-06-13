@@ -15,7 +15,7 @@ export class HBGame {
   private mode: GameMode = 'local_ai';
   private animId: number = 0;
   private lastTime: number = 0;
-  private localInput: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false };
+  private localInput: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false };
   private running = false;
   private onExit: () => void;
 
@@ -44,6 +44,8 @@ export class HBGame {
           }
         }
       );
+      this.match.onDefence = (x, y) => this.renderer.spawnDefencePuff(x, y);
+      this.match.onSuperKick = (x, y, dir) => this.renderer.triggerSuperKickFlash(x, y, dir);
       this.controls.onInput((input) => {
         this.localInput = { ...input };
       });

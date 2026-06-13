@@ -83,9 +83,9 @@ export const HB_PLAYER = {
 export const HB_BALL = {
   RADIUS: 7,
   GRAVITY: 350,
-  BOUNCE: 0.6,
-  GROUND_FRICTION: 0.88,
-  AIR_RESISTANCE: 0.001,
+  BOUNCE: 0.5,
+  GROUND_FRICTION: 0.92,
+  AIR_RESISTANCE: 0.003,
   MAX_SPEED: 480,
 } as const;
 

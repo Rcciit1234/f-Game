@@ -44,6 +44,10 @@ export class HBRenderer {
   private prevHomeScore = 0;
   private prevAwayScore = 0;
   private lastScoredBy: 'home' | 'away' | null = null;
+  private superKickFlashTimer = 0;
+  private superKickFlashX = 0;
+  private superKickFlashY = 0;
+  private superKickFlashDir = 1;
 
   constructor(container: HTMLElement) {
     this.canvas = document.createElement('canvas');
@@ -128,6 +132,12 @@ export class HBRenderer {
     this.drawBall(ctx, state.ball);
     if (state.homePlayer) this.drawPlayer(ctx, state.homePlayer, false, state.ball, state);
     if (state.awayPlayer) this.drawPlayer(ctx, state.awayPlayer, true, state.ball, state);
+
+    if (this.superKickFlashTimer > 0) {
+      this.drawSuperKickFlash(ctx);
+      this.superKickFlashTimer -= this.dt;
+    }
+
     this.drawScoreboard(ctx, state);
 
     ctx.restore();
@@ -765,6 +775,73 @@ export class HBRenderer {
     ctx.restore(); // restore Squash & Stretch scale
 
     ctx.restore(); // restore player translation
+  }
+
+  spawnDefencePuff(x: number, y: number) {
+    for (let i = 0; i < 10; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = 30 + Math.random() * 60;
+      this.particles.push({
+        x, y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed - 25,
+        life: 1, maxLife: 0.3 + Math.random() * 0.2,
+        color: ['#a0845c', '#c4a882', '#8a6e48'][Math.floor(Math.random() * 3)],
+        size: 2 + Math.random() * 3,
+      });
+    }
+  }
+
+  triggerSuperKickFlash(x: number, y: number, dir: number) {
+    this.superKickFlashTimer = 0.3;
+    this.superKickFlashX = x;
+    this.superKickFlashY = y;
+    this.superKickFlashDir = dir;
+  }
+
+  private drawSuperKickFlash(ctx: CanvasRenderingContext2D) {
+    const progress = this.superKickFlashTimer / 0.3;
+    const alpha = progress * 0.7;
+    const radius = 8 + (1 - progress) * 35;
+
+    ctx.save();
+
+    const grad = ctx.createRadialGradient(
+      this.superKickFlashX, this.superKickFlashY, 0,
+      this.superKickFlashX, this.superKickFlashY, radius
+    );
+    grad.addColorStop(0, `rgba(255,40,40,${alpha})`);
+    grad.addColorStop(0.3, `rgba(255,80,40,${alpha * 0.5})`);
+    grad.addColorStop(1, 'rgba(255,40,40,0)');
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(this.superKickFlashX, this.superKickFlashY, radius, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = `rgba(255,255,255,${alpha})`;
+    ctx.beginPath();
+    ctx.arc(this.superKickFlashX, this.superKickFlashY, radius * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = `rgba(255,255,255,${alpha * 0.6})`;
+    ctx.lineWidth = 2;
+    for (let i = -2; i <= 2; i++) {
+      const angle = Math.atan2(0, this.superKickFlashDir) + i * 0.35;
+      const len = 12 + (1 - progress) * 22;
+      const startR = radius * 0.45;
+      ctx.beginPath();
+      ctx.moveTo(
+        this.superKickFlashX + Math.cos(angle) * startR,
+        this.superKickFlashY + Math.sin(angle) * startR
+      );
+      ctx.lineTo(
+        this.superKickFlashX + Math.cos(angle) * (startR + len),
+        this.superKickFlashY + Math.sin(angle) * (startR + len)
+      );
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   private drawBall(ctx: CanvasRenderingContext2D, ball: HBBallState) {

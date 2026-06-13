@@ -8,6 +8,8 @@ export class HBMatch {
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
   private onScoreChange?: (home: number, away: number) => void;
   private onStateChange?: (state: string) => void;
+  onDefence?: (x: number, y: number) => void;
+  onSuperKick?: (x: number, y: number, dir: number) => void;
 
   constructor(homeId: string, homeName: string, awayId: string, awayName: string) {
     this.state = {
@@ -70,12 +72,12 @@ export class HBMatch {
     updatePlayer(h, homeInput, dt);
     updatePlayer(a, awayInput, dt);
 
-    if (homeInput.defence) performDefence(h, this.state.ball);
-    if (awayInput.defence) performDefence(a, this.state.ball);
+    if (homeInput.defence) { performDefence(h, this.state.ball); this.onDefence?.(h.x, h.y); }
+    if (awayInput.defence) { performDefence(a, this.state.ball); this.onDefence?.(a.x, a.y); }
     if (homeInput.kick) performKick(h, this.state.ball, homeInput);
     if (awayInput.kick) performKick(a, this.state.ball, awayInput);
-    if (homeInput.superKick) performSuperKick(h, this.state.ball);
-    if (awayInput.superKick) performSuperKick(a, this.state.ball);
+    if (homeInput.superKick) { performSuperKick(h, this.state.ball); if (!h.isGrounded) this.onSuperKick?.(h.x, h.y, h.facingRight ? 1 : -1); }
+    if (awayInput.superKick) { performSuperKick(a, this.state.ball); if (!a.isGrounded) this.onSuperKick?.(a.x, a.y, a.facingRight ? 1 : -1); }
 
     updateBall(this.state.ball, [h, a], dt);
 
