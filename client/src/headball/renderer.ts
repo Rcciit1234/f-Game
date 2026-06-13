@@ -1173,11 +1173,11 @@ export class HBRenderer {
     if (!this.confettiSpawned && elapsed < 0.05) {
       this.confettiSpawned = true;
       const confettiColors = ['#6abfde', '#c60b1e', '#00f0ff', '#8b5cf6', '#22c55e', '#ffc400', '#fff'];
-      for (let i = 0; i < 60; i++) {
+      for (let i = 0; i < 80; i++) {
         this.confetti.push({
           x: Math.random() * w,
           y: -Math.random() * h * 0.5,
-          vx: (Math.random() - 0.5) * 100,
+          vx: (Math.random() - 0.5) * 120,
           vy: 80 + Math.random() * 200,
           color: confettiColors[Math.floor(Math.random() * confettiColors.length)],
           rot: Math.random() * Math.PI * 2,
@@ -1275,6 +1275,197 @@ export class HBRenderer {
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(subText, 0, 50);
+
+    ctx.restore();
+
+    // ─── VICTORY CELEBRATION ───
+    if (!isDraw) {
+      if (elapsed > 0.7) {
+        this.drawVictoryCharacter(ctx, w, h, homeWon, elapsed - 0.7);
+      }
+      if (elapsed > 1.0) {
+        const vT = elapsed - 1.0;
+        const vAlpha = Math.min(1, vT * 2);
+        const vScale = 0.3 + Math.min(0.7, vT * 1.5);
+        ctx.save();
+        ctx.globalAlpha = vAlpha;
+        ctx.translate(w / 2, h / 2 + 145);
+        ctx.scale(vScale, vScale);
+        const pulse = 20 + 15 * Math.sin(this.time * 4);
+        ctx.fillStyle = '#ffdd00';
+        ctx.font = 'bold 40px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = '#ffdd00';
+        ctx.shadowBlur = pulse;
+        ctx.fillText('⚽ VAMOS! ⚽', 0, 0);
+        ctx.shadowBlur = 0;
+        ctx.restore();
+      }
+      if (elapsed > 1.3) {
+        const sT = elapsed - 1.3;
+        const sAlpha = Math.min(1, sT * 3);
+        ctx.save();
+        ctx.globalAlpha = sAlpha;
+        const bx = w / 2 + 75;
+        const by = h / 2 - 15;
+        ctx.fillStyle = '#fff';
+        ctx.beginPath();
+        ctx.roundRect(bx, by, 110, 30, 8);
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(bx + 25, by + 30);
+        ctx.lineTo(bx + 12, by + 45);
+        ctx.lineTo(bx + 40, by + 30);
+        ctx.fill();
+        ctx.fillStyle = '#111';
+        ctx.font = 'bold 13px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('WE WIN! 🏆', bx + 55, by + 15);
+        ctx.restore();
+      }
+    }
+  }
+
+  private drawVictoryCharacter(ctx: CanvasRenderingContext2D, w: number, h: number, isMessi: boolean, elapsed: number) {
+    const alpha = Math.min(1, elapsed * 2.5);
+    const bob = Math.sin(this.time * 5) * 3;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const cx = w / 2;
+    const cy = h / 2 + 85 + bob;
+    ctx.translate(cx, cy);
+
+    const jerseyColor = isMessi ? '#6abfde' : '#c60b1e';
+    const skinColor = '#f0c8a0';
+    const hr = 34;
+    const bodyW = 44;
+    const bodyH = 38;
+
+    // Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
+    ctx.beginPath();
+    ctx.ellipse(0, bodyH + 10, bodyW * 0.6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Legs
+    ctx.strokeStyle = '#222';
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-8, bodyH - 4);
+    ctx.lineTo(-12, bodyH + 12);
+    ctx.moveTo(8, bodyH - 4);
+    ctx.lineTo(12, bodyH + 12);
+    ctx.stroke();
+
+    // Body / Jersey
+    ctx.fillStyle = jerseyColor;
+    ctx.beginPath();
+    ctx.roundRect(-bodyW / 2, 0, bodyW, bodyH, 6);
+    ctx.fill();
+
+    // Argentina stripes
+    if (isMessi) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-bodyW / 2, 0, bodyW, bodyH, 6);
+      ctx.clip();
+      ctx.fillStyle = '#ffffff';
+      for (let s = -16; s <= 16; s += 8) {
+        ctx.fillRect(s, 0, 2.5, bodyH);
+      }
+      ctx.restore();
+    } else {
+      ctx.fillStyle = '#ffc400';
+      ctx.fillRect(-bodyW / 2, bodyH * 0.35, bodyW, 5);
+    }
+
+    // Number on jersey
+    ctx.fillStyle = '#fff';
+    ctx.font = 'bold 15px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isMessi ? '10' : '8', 0, bodyH * 0.5);
+
+    // Arms raised
+    ctx.strokeStyle = skinColor;
+    ctx.lineWidth = 6;
+    ctx.lineCap = 'round';
+    const armWave = Math.sin(this.time * 6) * 5;
+    ctx.beginPath();
+    ctx.moveTo(-bodyW / 2, 8);
+    ctx.lineTo(-bodyW / 2 - 18, -10 + armWave);
+    ctx.moveTo(bodyW / 2, 8);
+    ctx.lineTo(bodyW / 2 + 18, -10 - armWave);
+    ctx.stroke();
+
+    // Hands (small circles)
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.arc(-bodyW / 2 - 18, -10 + armWave, 4, 0, Math.PI * 2);
+    ctx.arc(bodyW / 2 + 18, -10 - armWave, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Head
+    ctx.fillStyle = skinColor;
+    ctx.beginPath();
+    ctx.arc(0, -hr * 0.5, hr, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Headband
+    ctx.fillStyle = jerseyColor;
+    ctx.beginPath();
+    ctx.ellipse(0, -hr * 0.55, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (isMessi) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, -hr * 0.55, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = '#fff';
+      for (let s = -3; s <= 3; s += 2) ctx.fillRect(s * 7, -hr - 4, 2.5, 14);
+      ctx.restore();
+    } else {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, -hr * 0.55, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = '#ffc400';
+      ctx.fillRect(-3, -hr - 3, 6, 12);
+      ctx.restore();
+    }
+
+    // Hair
+    ctx.fillStyle = isMessi ? '#3a2a1a' : '#9a8a7a';
+    ctx.beginPath();
+    ctx.arc(0, -hr * 0.65, hr * 0.95, Math.PI * 1.05, Math.PI * 1.95);
+    ctx.ellipse(0, -hr * 1.0, hr * 0.85, hr * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Eyes
+    ctx.fillStyle = '#111';
+    ctx.beginPath();
+    ctx.arc(-10, -hr * 0.45, 3.5, 0, Math.PI * 2);
+    ctx.arc(10, -hr * 0.45, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Smile
+    ctx.strokeStyle = '#111';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, -hr * 0.2, 9, 0.1, Math.PI - 0.1);
+    ctx.stroke();
+
+    // Messi beard
+    if (isMessi) {
+      ctx.fillStyle = 'rgba(50,35,20,0.25)';
+      ctx.beginPath();
+      ctx.ellipse(0, -hr * 0.1, 13, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     ctx.restore();
   }
