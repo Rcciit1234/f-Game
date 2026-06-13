@@ -194,7 +194,7 @@ export class HBMenu {
   private wrap(inner: string) {
     const fan = (side: 'L' | 'R', team: 'blue' | 'red', idx: number, top: number, left: number) => {
       const isBlue = team === 'blue';
-      const color = isBlue ? '#2563eb' : '#dc2626';
+      const color = isBlue ? '#6abfde' : '#c60b1e';
       const bodyClass = isBlue ? 'hf-body-b' : 'hf-body-r';
       const cheerAnim = isBlue ? 'hfCheerBlue' : 'hfCheerRed';
       const armL = isBlue ? 'hfArmLUp' : 'hfArmLRed';

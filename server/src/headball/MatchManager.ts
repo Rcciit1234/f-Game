@@ -447,7 +447,7 @@ export class HBHeadBallMatchManager {
       headSize: HB_PLAYER.HEAD_RADIUS,
       skinColor: '#e8b88a',
       hairColor: '#4a3728',
-      jerseyColor: team === 'home' ? '#2563eb' : '#dc2626',
+      jerseyColor: team === 'home' ? '#6abfde' : '#c60b1e',
       animFrame: 0,
     };
   }

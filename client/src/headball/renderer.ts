@@ -281,7 +281,7 @@ export class HBRenderer {
         }
 
         // Draw Fan Shirt
-        const teamColor = isLeftSide ? '#2563eb' : '#dc2626';
+        const teamColor = isLeftSide ? '#6abfde' : '#c60b1e';
         ctx.fillStyle = teamColor;
         ctx.beginPath();
         ctx.roundRect(fx - 7, fy - 12 + bob, 14, 12, 3);
@@ -851,6 +851,28 @@ export class HBRenderer {
     ctx.ellipse(0, headY - 15, hr * 1.34, 5.5, 0, 0, Math.PI * 2);
     ctx.stroke();
 
+    // Argentina home stripes (white vertical on headband)
+    if (player.team === 'home') {
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, headY - 15, hr * 1.34, 5.5, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = '#ffffff';
+      for (let s = -3; s <= 3; s += 2) {
+        ctx.fillRect(s * hr * 0.25 - 1.5, headY - 25, 2.5, 20);
+      }
+      ctx.restore();
+    } else {
+      // Spain yellow stripe on headband
+      ctx.save();
+      ctx.beginPath();
+      ctx.ellipse(0, headY - 15, hr * 1.34, 5.5, 0, 0, Math.PI * 2);
+      ctx.clip();
+      ctx.fillStyle = '#ffc400';
+      ctx.fillRect(-hr * 0.1, headY - 22, hr * 0.2, 14);
+      ctx.restore();
+    }
+
     ctx.fillStyle = '#ffffff';
     ctx.font = `bold ${hr * 0.7}px Rajdhani, sans-serif`;
     ctx.textAlign = 'center';
@@ -994,7 +1016,7 @@ export class HBRenderer {
     ctx.save();
     ctx.translate(-6, 0);
     ctx.scale(homeScale, homeScale);
-    ctx.fillStyle = isGoal ? '#00f0ff' : '#2563eb';
+    ctx.fillStyle = isGoal ? '#00f0ff' : '#6abfde';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
@@ -1010,7 +1032,7 @@ export class HBRenderer {
     ctx.save();
     ctx.translate(6, 0);
     ctx.scale(awayScale, awayScale);
-    ctx.fillStyle = isGoal ? '#00f0ff' : '#dc2626';
+    ctx.fillStyle = isGoal ? '#00f0ff' : '#c60b1e';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'left';
     ctx.fillText(String(state.awayScore), 0, 0);
@@ -1150,7 +1172,7 @@ export class HBRenderer {
 
     if (!this.confettiSpawned && elapsed < 0.05) {
       this.confettiSpawned = true;
-      const confettiColors = ['#2563eb', '#dc2626', '#00f0ff', '#8b5cf6', '#22c55e', '#f59e0b', '#fff'];
+      const confettiColors = ['#6abfde', '#c60b1e', '#00f0ff', '#8b5cf6', '#22c55e', '#ffc400', '#fff'];
       for (let i = 0; i < 60; i++) {
         this.confetti.push({
           x: Math.random() * w,

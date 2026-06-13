@@ -18,7 +18,7 @@ export function createPlayer(id: string, name: string, team: 'home' | 'away'): H
     headSize: HB_PLAYER.HEAD_RADIUS,
     skinColor: ['#e8b88a', '#c68642', '#8d5524', '#f0c8a0'][Math.floor(Math.random() * 4)],
     hairColor: ['#4a3728', '#1a1a1a', '#8b4513', '#ffd700', '#c0c0c0'][Math.floor(Math.random() * 5)],
-    jerseyColor: isHome ? '#2563eb' : '#dc2626',
+    jerseyColor: isHome ? '#6abfde' : '#c60b1e',
     animFrame: 0,
   };
 }
