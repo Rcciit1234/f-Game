@@ -545,10 +545,12 @@ export class HBMenu {
   // ─── Main ───
   private buildMain() {
     this.container.innerHTML = this.wrap(`
-      <div style="font-size:2.8rem;margin-bottom:4px;animation:hbFloat 3s ease-in-out infinite;">⚽</div>
-      <h1 style="font-size:2.2rem;margin:0;background:linear-gradient(135deg,#00f0ff,#8b5cf6,#00f0ff);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:hbPulse 2.5s ease-in-out infinite;letter-spacing:3px;text-shadow:0 0 40px rgba(0,240,255,0.15);">HEAD BALL</h1>
-      <p style="color:rgba(255,255,255,0.35);font-size:0.8rem;margin:0;letter-spacing:2px;text-transform:uppercase;">1v1 Big-Head Football</p>
-      <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px;width:100%;">
+      <div class="hb-menu-card" style="margin-bottom:0;padding:24px 32px 16px;">
+        <div style="font-size:2.8rem;animation:hbFloat 3s ease-in-out infinite;">⚽</div>
+        <h1 style="font-size:2.2rem;margin:0;background:linear-gradient(135deg,#00f0ff,#8b5cf6,#00f0ff);background-size:200% auto;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:hbPulse 2.5s ease-in-out infinite;letter-spacing:3px;text-shadow:0 0 40px rgba(0,240,255,0.15);">HEAD BALL</h1>
+        <p style="color:rgba(255,255,255,0.35);font-size:0.8rem;margin:0;letter-spacing:2px;text-transform:uppercase;">1v1 Big-Head Football</p>
+      </div>
+      <div style="width:100%;max-width:290px;display:flex;flex-direction:column;gap:10px;">
         <button id="hb-ai-btn" style="${this.btnStyle(true)}">🎮 Play vs AI</button>
         <button id="hb-create-btn" style="${this.btnStyle(true)}">🌐 Create Room</button>
         <button id="hb-join-btn" style="${this.btnStyle(true)}">🔗 Join Room</button>
