@@ -561,10 +561,10 @@ export class HBMenu {
       </div>
     `);
     this.startMenuAnimation();
-    this.listen('hb-ai-btn', 'click', () => this.onStartAI());
-    this.listen('hb-create-btn', 'click', () => this.becomeHost());
-    this.listen('hb-join-btn', 'click', () => this.setState('joining'));
-    this.listen('hb-back-btn', 'click', () => { this.destroy(); this.onBack(); });
+    this.listen('hb-ai-btn', 'click', () => { sound.ensureResumed(); this.onStartAI(); });
+    this.listen('hb-create-btn', 'click', () => { sound.ensureResumed(); this.becomeHost(); });
+    this.listen('hb-join-btn', 'click', () => { sound.ensureResumed(); this.setState('joining'); });
+    this.listen('hb-back-btn', 'click', () => { sound.ensureResumed(); this.destroy(); this.onBack(); });
     sound.init();
     this.wireMuteBtn();
   }

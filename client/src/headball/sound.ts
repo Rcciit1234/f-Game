@@ -13,11 +13,17 @@ export class HBSound {
     try {
       this.ctx = new AudioContext();
       this.masterGain = this.ctx.createGain();
-      this.masterGain.gain.value = 0.4;
+      this.masterGain.gain.value = 0.5;
       this.masterGain.connect(this.ctx.destination);
       this.startCrowd();
       this._inited = true;
     } catch { /* audio not supported */ }
+  }
+
+  ensureResumed() {
+    if (this.ctx?.state === 'suspended') {
+      this.ctx.resume();
+    }
   }
 
   private startCrowd() {
@@ -47,7 +53,7 @@ export class HBSound {
     hp.frequency.value = 200;
 
     this.crowdGain = ctx.createGain();
-    this.crowdGain.gain.value = 0.08;
+    this.crowdGain.gain.value = 0.2;
 
     src.connect(bp);
     bp.connect(hp);
@@ -67,13 +73,14 @@ export class HBSound {
 
   playCheer() {
     if (!this.ctx || !this.masterGain || this._isMuted) return;
+    this.ensureResumed();
     const ctx = this.ctx;
 
     if (this.crowdGain) {
       this.crowdGain.gain.cancelScheduledValues(ctx.currentTime);
       this.crowdGain.gain.setValueAtTime(this.crowdGain.gain.value, ctx.currentTime);
-      this.crowdGain.gain.linearRampToValueAtTime(0.25, ctx.currentTime + 0.1);
-      this.crowdGain.gain.linearRampToValueAtTime(0.08, ctx.currentTime + 2.5);
+      this.crowdGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.1);
+      this.crowdGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2.5);
     }
 
     for (let i = 0; i < 3; i++) {
@@ -81,7 +88,7 @@ export class HBSound {
       const g = ctx.createGain();
       osc.type = 'sine';
       osc.frequency.value = 700 + Math.random() * 600;
-      g.gain.setValueAtTime(0.03, ctx.currentTime + i * 0.15);
+      g.gain.setValueAtTime(0.06, ctx.currentTime + i * 0.15);
       g.gain.linearRampToValueAtTime(0, ctx.currentTime + i * 0.15 + 0.6);
       osc.connect(g);
       g.connect(this.masterGain);
@@ -92,13 +99,14 @@ export class HBSound {
 
   playKick() {
     if (!this.ctx || !this.masterGain || this._isMuted) return;
+    this.ensureResumed();
     const ctx = this.ctx;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
     osc.type = 'square';
     osc.frequency.setValueAtTime(120, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.08);
-    g.gain.setValueAtTime(0.12, ctx.currentTime);
+    g.gain.setValueAtTime(0.2, ctx.currentTime);
     g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
     osc.connect(g);
     g.connect(this.masterGain);
@@ -108,6 +116,7 @@ export class HBSound {
 
   playWhistle() {
     if (!this.ctx || !this.masterGain || this._isMuted) return;
+    this.ensureResumed();
     const ctx = this.ctx;
     const osc = ctx.createOscillator();
     const g = ctx.createGain();
@@ -115,7 +124,7 @@ export class HBSound {
     osc.frequency.setValueAtTime(800, ctx.currentTime);
     osc.frequency.linearRampToValueAtTime(950, ctx.currentTime + 0.2);
     osc.frequency.linearRampToValueAtTime(780, ctx.currentTime + 0.4);
-    g.gain.setValueAtTime(0.08, ctx.currentTime);
+    g.gain.setValueAtTime(0.15, ctx.currentTime);
     g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.4);
     osc.connect(g);
     g.connect(this.masterGain);
@@ -126,7 +135,7 @@ export class HBSound {
   toggleMute() {
     this._isMuted = !this._isMuted;
     if (this.masterGain) {
-      this.masterGain.gain.value = this._isMuted ? 0 : 0.4;
+      this.masterGain.gain.value = this._isMuted ? 0 : 0.5;
     }
     return this._isMuted;
   }

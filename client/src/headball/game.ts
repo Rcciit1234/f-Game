@@ -139,6 +139,7 @@ export class HBGame {
 
   private loop = (time: number) => {
     if (!this.running) return;
+    sound.ensureResumed();
     const dt = Math.min((time - this.lastTime) / 1000, 0.05);
     this.lastTime = time;
 
@@ -158,6 +159,7 @@ export class HBGame {
 
   private loopOnline = (time: number) => {
     if (!this.running) return;
+    sound.ensureResumed();
     this.lastTime = time;
 
     if (this.network) {
