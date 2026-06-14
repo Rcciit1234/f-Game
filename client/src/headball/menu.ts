@@ -1,4 +1,5 @@
 import { HBHeadBallNetwork } from './network.js';
+import { sound } from './sound.js';
 
 type MenuState = 'main' | 'creating' | 'host_waiting' | 'joining' | 'joined' | 'error';
 
@@ -310,6 +311,8 @@ export class HBMenu {
             ${inner}
           </div>
         </div>
+
+        <button id="hb-mute-btn" style="position:absolute;top:14px;right:14px;z-index:20;width:40px;height:40px;border:none;border-radius:50%;background:rgba(255,255,255,0.08);color:rgba(255,255,255,0.5);font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;-webkit-tap-highlight-color:transparent;padding:0;line-height:1;">🔊</button>
       </div>
     `;
   }
@@ -562,6 +565,16 @@ export class HBMenu {
     this.listen('hb-create-btn', 'click', () => this.becomeHost());
     this.listen('hb-join-btn', 'click', () => this.setState('joining'));
     this.listen('hb-back-btn', 'click', () => { this.destroy(); this.onBack(); });
+    sound.init();
+    this.wireMuteBtn();
+  }
+
+  private wireMuteBtn() {
+    const btn = document.getElementById('hb-mute-btn');
+    if (!btn) return;
+    const update = () => { btn.textContent = sound.isMuted ? '🔇' : '🔊'; };
+    btn.addEventListener('click', () => { sound.toggleMute(); update(); });
+    update();
   }
 
   private becomeHost() {

@@ -21,6 +21,7 @@ export class HBControls {
   private jumpTouch: number | null = null;
   private kickTouch: number | null = null;
   private defenceTouch: number | null = null;
+  onMuteToggle?: () => void;
 
   constructor() {
     this.setupKeyboard();
@@ -29,6 +30,10 @@ export class HBControls {
 
   private setupKeyboard() {
     window.addEventListener('keydown', (e) => {
+      if (e.key === 'm' || e.key === 'M') {
+        this.onMuteToggle?.();
+        return;
+      }
       this.keys.add(e.key);
       if (e.key === ' ') e.preventDefault();
       this.fireCallbacks();
@@ -72,6 +77,8 @@ export class HBControls {
           this.rightTouch = touch.identifier;
         } else if (x < sw * 0.5 && y < sh * 0.3) {
           this.jumpTouch = touch.identifier;
+        } else if (x > sw * 0.88 && y < sh * 0.1) {
+          this.onMuteToggle?.();
         } else if (x > sw * 0.65 && y >= sh * 0.55) {
           this.kickTouch = touch.identifier;
         } else if (x > sw * 0.65 && y >= sh * 0.3 && y < sh * 0.55) {

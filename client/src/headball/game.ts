@@ -4,6 +4,7 @@ import { HBControls } from './controls.js';
 import { HBMatch, getAIInput } from './match.js';
 import { createPlayer } from './player.js';
 import { HBHeadBallNetwork, HBOnlineStateData } from './network.js';
+import { sound } from './sound.js';
 
 type GameMode = 'local_ai' | 'online';
 
@@ -28,6 +29,8 @@ export class HBGame {
     this.renderer = new HBRenderer(container);
     this.controls = new HBControls();
     this.onExit = onExit;
+    sound.init();
+    this.controls.onMuteToggle = () => sound.toggleMute();
   }
 
   start(mode: GameMode = 'local_ai') {
@@ -37,15 +40,19 @@ export class HBGame {
     if (mode === 'local_ai') {
       this.match = new HBMatch('player1', 'You', 'player2', 'AI');
       this.match.setCallbacks(
-        () => {},
+        () => { sound.playCheer(); },
         (s) => {
+          if (s === 'countdown') sound.playWhistle();
+          if (s === 'playing') sound.playWhistle();
           if (s === 'ended') {
+            sound.playCheer();
             this.exitTimer = setTimeout(() => this.cleanup(), 3000);
           }
         }
       );
-      this.match.onDefence = (x, y) => this.renderer.spawnDefencePuff(x, y);
-      this.match.onSuperKick = (x, y, dir) => this.renderer.triggerSuperKickFlash(x, y, dir);
+      this.match.onDefence = (x, y) => { sound.playKick(); this.renderer.spawnDefencePuff(x, y); };
+      this.match.onSuperKick = (x, y, dir) => { sound.playKick(); this.renderer.triggerSuperKickFlash(x, y, dir); };
+      this.match.onKick = () => sound.playKick();
       this.controls.onInput((input) => {
         this.localInput = { ...input };
       });
@@ -143,7 +150,7 @@ export class HBGame {
       );
       this.match.update(dt, this.localInput, aiInput);
       this.renderer.render(this.match.state);
-      this.renderer.drawTouchControls();
+      this.renderer.drawTouchControls(sound.isMuted);
     }
 
     this.animId = requestAnimationFrame(this.loop);
@@ -159,7 +166,7 @@ export class HBGame {
 
     if (this.onlineState) {
       this.renderer.render(this.onlineState);
-      this.renderer.drawTouchControls();
+      this.renderer.drawTouchControls(sound.isMuted);
     }
 
     this.animId = requestAnimationFrame(this.loopOnline);
@@ -171,6 +178,7 @@ export class HBGame {
     if (this.exitTimer) clearTimeout(this.exitTimer);
     this.match?.destroy();
     this.controls.destroy();
+    sound.destroy();
     const handler = (this as any)._escHandler;
     if (handler) window.removeEventListener('keydown', handler);
     this.container.innerHTML = '';

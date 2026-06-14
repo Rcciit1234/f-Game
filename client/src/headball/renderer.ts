@@ -1528,7 +1528,7 @@ export class HBRenderer {
     ctx.globalAlpha = 1;
   }
 
-  drawTouchControls() {
+  drawTouchControls(isMuted = false) {
     if (!('ontouchstart' in window)) return;
     const ctx = this.ctx;
     const w = this.canvas.width;
@@ -1541,6 +1541,19 @@ export class HBRenderer {
     const kickPulse = 1 + 0.05 * Math.sin(this.time * 3);
     const jumpPulse = 1 + 0.04 * Math.sin(this.time * 2.5 + 1);
     const defPulse = 1 + 0.04 * Math.sin(this.time * 2.8 + 2);
+
+    ctx.globalAlpha = 0.35;
+    const muteR = 18 * s;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(w - pad - muteR, pad + muteR, muteR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.globalAlpha = 0.6;
+    ctx.font = `${18 * s}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(isMuted ? '🔇' : '🔊', w - pad - muteR, pad + muteR);
+    ctx.globalAlpha = 0.25;
 
     ctx.globalAlpha = 0.25;
 
