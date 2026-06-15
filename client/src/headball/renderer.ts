@@ -1283,6 +1283,7 @@ export class HBRenderer {
 
     if (!this.goalParticlesSpawned && elapsed < 0.05) {
       this.goalParticlesSpawned = true;
+      this.spawnGoalFireworks(ctx, w, h);
       const burstColors = ['#00f0ff', '#fff', '#8b5cf6', '#22c55e', '#f59e0b'];
       for (let i = 0; i < 30; i++) {
         const angle = (Math.PI * 2 * i) / 30 + (Math.random() - 0.5) * 0.4;
@@ -1302,6 +1303,23 @@ export class HBRenderer {
       const flashAlpha = 0.2 * (1 - elapsed / 0.3);
       ctx.fillStyle = `rgba(255,255,255,${flashAlpha})`;
       ctx.fillRect(0, 0, w, h);
+    }
+
+    // Big fire blast glow at top of stadium
+    if (elapsed < 1.5) {
+      const t = elapsed / 1.5;
+      const fireAlpha = Math.max(0, 1 - t);
+      const fireRadius = 80 + (1 - fireAlpha) * 120 + 15 * Math.sin(this.time * 6);
+      const fireGrad = ctx.createRadialGradient(w / 2, h * 0.08, 3, w / 2, h * 0.08, fireRadius);
+      fireGrad.addColorStop(0, `rgba(255,255,200,${fireAlpha * 0.5})`);
+      fireGrad.addColorStop(0.15, `rgba(255,200,50,${fireAlpha * 0.35})`);
+      fireGrad.addColorStop(0.4, `rgba(255,100,20,${fireAlpha * 0.18})`);
+      fireGrad.addColorStop(0.7, `rgba(200,50,10,${fireAlpha * 0.08})`);
+      fireGrad.addColorStop(1, 'rgba(150,30,0,0)');
+      ctx.fillStyle = fireGrad;
+      ctx.beginPath();
+      ctx.arc(w / 2, h * 0.08, fireRadius, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     let textScale: number;
@@ -1336,6 +1354,26 @@ export class HBRenderer {
     ctx.shadowBlur = 0;
 
     ctx.restore();
+  }
+
+  private spawnGoalFireworks(ctx: CanvasRenderingContext2D, w: number, h: number) {
+    const fireColors = ['#ff4400', '#ff8800', '#ffcc00', '#ffffff', '#ff6600', '#ffaa00'];
+    for (let b = 0; b < 5; b++) {
+      const cx = (0.1 + Math.random() * 0.8) * w;
+      const cy = (0.04 + Math.random() * 0.1) * h;
+      for (let i = 0; i < 25; i++) {
+        const angle = (Math.PI * 2 * i) / 25 + (Math.random() - 0.5) * 0.6;
+        const speed = 60 + Math.random() * 140;
+        this.particles.push({
+          x: cx, y: cy,
+          vx: Math.cos(angle) * speed,
+          vy: Math.sin(angle) * speed,
+          life: 1, maxLife: 0.5 + Math.random() * 0.7,
+          color: fireColors[Math.floor(Math.random() * fireColors.length)],
+          size: 2 + Math.random() * 4,
+        });
+      }
+    }
   }
 
   private drawMatchEnd(ctx: CanvasRenderingContext2D, w: number, h: number, state: HBMatchState, dt: number) {
