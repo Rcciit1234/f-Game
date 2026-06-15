@@ -8,6 +8,7 @@ const KEY_MAP: HBKeyMap = {
   'w': 'jump', 'W': 'jump', 'ArrowUp': 'jump',
   ' ': 'kick',
   's': 'kickHold', 'S': 'kickHold', 'ArrowDown': 'kickHold',
+  'n': 'kickHold', 'N': 'kickHold',
   'm': 'superKick', 'M': 'superKick',
 };
 
