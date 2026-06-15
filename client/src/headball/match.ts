@@ -28,7 +28,7 @@ export class HBMatch {
   }
 
   private createBall(): HBBallState {
-    return { x: HB_FIELD.WIDTH / 2, y: HB_FIELD.GROUND_Y - HB_BALL.RADIUS - 10, vx: 0, vy: 0, radius: HB_BALL.RADIUS, lastTouchBy: null, lastTouchTeam: null };
+    return { x: HB_FIELD.WIDTH / 2, y: HB_FIELD.GROUND_Y - HB_BALL.RADIUS - 10, vx: 0, vy: 0, radius: HB_BALL.RADIUS, lastTouchBy: null, lastTouchTeam: null, skyLobActive: false };
   }
 
   setCallbacks(onScore: (h: number, a: number) => void, onState: (s: string) => void) {
@@ -129,6 +129,7 @@ export class HBMatch {
     ball.vx = 0; ball.vy = 0;
     ball.lastTouchBy = null;
     ball.lastTouchTeam = null;
+    ball.skyLobActive = false;
   }
 
   destroy() {
@@ -140,7 +141,7 @@ export class HBMatch {
 }
 
 export function getAIInput(player: HBPlayerState, opponent: HBPlayerState, ball: HBBallState): HBInput {
-  const input: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false };
+  const input: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false, skyLob: false };
   const isHome = player.team === 'home';
   const myGoalX = isHome ? 0 : HB_FIELD.WIDTH;
   const oppGoalX = isHome ? HB_FIELD.WIDTH : 0;

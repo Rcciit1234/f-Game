@@ -26,6 +26,7 @@ export interface HBBallState {
   radius: number;
   lastTouchBy: string | null;
   lastTouchTeam: 'home' | 'away' | null;
+  skyLobActive: boolean;
 }
 
 export interface HBInput {
@@ -36,6 +37,7 @@ export interface HBInput {
   kickHold: boolean;
   superKick: boolean;
   defence: boolean;
+  skyLob: boolean;
 }
 
 export interface HBMatchState {

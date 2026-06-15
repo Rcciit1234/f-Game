@@ -16,7 +16,7 @@ export class HBGame {
   private mode: GameMode = 'local_ai';
   private animId: number = 0;
   private lastTime: number = 0;
-  private localInput: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false };
+  private localInput: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false, skyLob: false };
   private running = false;
   private onExit: () => void;
 

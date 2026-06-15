@@ -80,8 +80,8 @@ export class HBHeadBallMatchManager {
       state: 'countdown',
       countdownTimer: 3,
       goalScoredTimer: 0,
-      homeInput: { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false },
-      awayInput: { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false },
+      homeInput: { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false, skyLob: false },
+      awayInput: { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false, skyLob: false },
       lastUpdateTime: Date.now(),
       tickAccumulator: 0,
       finalStateSent: false,
@@ -344,6 +344,7 @@ export class HBHeadBallMatchManager {
     if (dx > HB_PLAYER.BODY_WIDTH + ball.radius || dy > 40) return;
     ball.vx *= 0.1;
     ball.vy = -50;
+    ball.skyLobActive = false;
     ball.x = player.x + (player.facingRight ? 15 : -15);
     ball.y = player.y - 22;
     ball.lastTouchBy = player.id;
@@ -361,7 +362,15 @@ export class HBHeadBallMatchManager {
     player.kickTimer = HB_PLAYER.KICK_DURATION;
     const dir = player.facingRight ? 1 : -1;
 
-    if (input.kickHold) {
+    if (input.skyLob) {
+      ball.vy = HB_PLAYER.JUMP_VELOCITY;
+      ball.vx = dir * HB_PLAYER.LOW_KICK_SPEED * 0.6;
+      ball.skyLobActive = true;
+    } else if (ball.skyLobActive && ball.lastTouchBy === player.id) {
+      ball.vx = dir * 500;
+      ball.vy = -180;
+      ball.skyLobActive = false;
+    } else if (input.kickHold) {
       ball.vx = dir * HB_PLAYER.HIGH_KICK_SPEED;
       ball.vy = HB_PLAYER.HIGH_KICK_Y;
     } else {
@@ -379,6 +388,7 @@ export class HBHeadBallMatchManager {
     const dir = player.facingRight ? 1 : -1;
     ball.vx = dir * HB_PLAYER.LOW_KICK_SPEED * 1.3;
     ball.vy = -400;
+    ball.skyLobActive = false;
     ball.lastTouchBy = player.id;
     ball.lastTouchTeam = player.team;
     ball.x = player.x + dir * (HB_PLAYER.KICK_RANGE * 0.7);
@@ -406,6 +416,7 @@ export class HBHeadBallMatchManager {
     match.ball.vx = 0; match.ball.vy = 0;
     match.ball.lastTouchBy = null;
     match.ball.lastTouchTeam = null;
+    match.ball.skyLobActive = false;
   }
 
   private endMatch(match: HBOnlineMatch) {
@@ -458,6 +469,7 @@ export class HBHeadBallMatchManager {
       y: HB_FIELD.GROUND_Y - HB_BALL.RADIUS - 10,
       vx: 0, vy: 0, radius: HB_BALL.RADIUS,
       lastTouchBy: null, lastTouchTeam: null,
+      skyLobActive: false,
     };
   }
 

@@ -8,14 +8,14 @@ const KEY_MAP: HBKeyMap = {
   'w': 'jump', 'W': 'jump', 'ArrowUp': 'jump',
   ' ': 'kick',
   's': 'kickHold', 'S': 'kickHold', 'ArrowDown': 'kickHold',
-  'n': 'kickHold', 'N': 'kickHold',
+  'n': 'skyLob', 'N': 'skyLob',
   'm': 'superKick', 'M': 'superKick',
 };
 
 export class HBControls {
   private keys: Set<string> = new Set();
   private callbacks: Array<(input: HBInput) => void> = [];
-  private touchState: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false };
+  private touchState: HBInput = { left: false, right: false, jump: false, kick: false, kickHold: false, superKick: false, defence: false, skyLob: false };
 
   private leftTouch: number | null = null;
   private rightTouch: number | null = null;
@@ -61,6 +61,7 @@ export class HBControls {
       kickHold: false,
       defence: this.defenceTouch !== null,
       superKick: false,
+      skyLob: false,
     });
 
     const el = () => document.getElementById('headball-canvas') || document.body;
@@ -112,6 +113,7 @@ export class HBControls {
       kick: this.keys.has(' ') || this.touchState.kick,
       kickHold: this.keys.has('s') || this.keys.has('S') || this.keys.has('ArrowDown') || this.touchState.kickHold,
       superKick: this.keys.has('m') || this.keys.has('M') || this.touchState.superKick,
+      skyLob: this.keys.has('n') || this.keys.has('N'),
       defence: this.touchState.defence,
     };
     return input;
