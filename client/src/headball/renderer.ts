@@ -1040,8 +1040,47 @@ export class HBRenderer {
 
     ctx.fillStyle = `rgba(0,0,0,${0.45 + 0.05 * Math.sin(this.time * 1.5)})`;
     ctx.beginPath();
-    ctx.roundRect(-80, -16, 160, 32, 8);
+    ctx.roundRect(-95, -16, 190, 32, 8);
     ctx.fill();
+
+    const wave = Math.sin(this.time * 3);
+    const fw = 18, fh = 12;
+
+    ctx.save();
+    ctx.translate(-78, 0);
+    ctx.transform(1, wave * 0.04, 0, 1, 0, 0);
+    ctx.beginPath();
+    ctx.roundRect(-fw / 2, -fh / 2, fw, fh, 1);
+    ctx.clip();
+    ctx.fillStyle = '#6abfde';
+    ctx.fillRect(-fw / 2, -fh / 2, fw, fh / 3);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(-fw / 2, -fh / 6, fw, fh / 3);
+    ctx.fillStyle = '#6abfde';
+    ctx.fillRect(-fw / 2, fh / 6, fw, fh / 3);
+    ctx.fillStyle = '#ffc400';
+    ctx.beginPath();
+    ctx.arc(0, 0, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(78, 0);
+    ctx.transform(1, wave * 0.04, 0, 1, 0, 0);
+    ctx.beginPath();
+    ctx.roundRect(-fw / 2, -fh / 2, fw, fh, 1);
+    ctx.clip();
+    ctx.fillStyle = '#c60b1e';
+    ctx.fillRect(-fw / 2, -fh / 2, fw, fh / 4);
+    ctx.fillStyle = '#ffc400';
+    ctx.fillRect(-fw / 2, -fh / 4, fw, fh / 2);
+    ctx.fillStyle = '#c60b1e';
+    ctx.fillRect(-fw / 2, fh / 4, fw, fh / 4);
+    ctx.fillStyle = '#c60b1e';
+    ctx.fillRect(-2.5, -3.5, 5, 7);
+    ctx.fillStyle = '#ffc400';
+    ctx.fillRect(-1.5, -1.5, 3, 3);
+    ctx.restore();
 
     const homeScale = 1 + goalFlash * 0.25;
     const awayScale = 1 + goalFlash * 0.25;
