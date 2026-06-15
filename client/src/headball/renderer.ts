@@ -123,6 +123,7 @@ export class HBRenderer {
     this.drawBackground(ctx);
     this.drawStands(ctx, state);
     this.drawField(ctx);
+    this.drawFog(ctx);
     this.drawGoals(ctx, state);
 
     if (state.homePlayer) this.drawShadow(ctx, state.homePlayer.x, state.homePlayer.y, 10);
@@ -176,6 +177,16 @@ export class HBRenderer {
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, HB_FIELD.WIDTH, HB_FIELD.GROUND_Y);
 
+    // Aurora borealis — subtle shifting color wash high in the sky
+    const auroraOffset = Math.sin(this.time * 0.08) * 120;
+    const auroraGrad = ctx.createLinearGradient(auroraOffset, 0, auroraOffset + 250, 0);
+    auroraGrad.addColorStop(0, 'rgba(10,80,120,0)');
+    auroraGrad.addColorStop(0.4, `rgba(20,120,160,${0.02 + 0.015 * Math.sin(this.time * 0.12)})`);
+    auroraGrad.addColorStop(0.7, `rgba(40,60,140,${0.015 + 0.015 * Math.sin(this.time * 0.1 + 1)})`);
+    auroraGrad.addColorStop(1, 'rgba(10,80,120,0)');
+    ctx.fillStyle = auroraGrad;
+    ctx.fillRect(0, 0, HB_FIELD.WIDTH, 120);
+
     for (const star of this.stars) {
       const twinkle = 0.5 + 0.5 * Math.sin(this.time * star.speed + star.phase);
       const alpha = star.baseAlpha * twinkle;
@@ -187,6 +198,22 @@ export class HBRenderer {
       ctx.fill();
     }
 
+    // Crescent moon with glow
+    const moonX = 650, moonY = 55, moonR = 8;
+    ctx.save();
+    ctx.shadowColor = 'rgba(180,220,255,0.6)';
+    ctx.shadowBlur = 25;
+    ctx.fillStyle = '#f0f4ff';
+    ctx.beginPath();
+    ctx.arc(moonX, moonY, moonR, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = COLORS.sky1;
+    ctx.beginPath();
+    ctx.arc(moonX + 3, moonY - 2, moonR * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
     // Sweeping floodlight beams
     ctx.save();
     const lightPoles = [
@@ -196,35 +223,58 @@ export class HBRenderer {
     for (const pole of lightPoles) {
       const sweep = Math.sin(this.time * 0.45 + pole.phase) * 0.28;
       const angle = Math.PI / 2 + pole.targetAngle + sweep;
-      
-      // Draw floodlight bulb glow
-      ctx.fillStyle = '#ffffff';
-      ctx.shadowColor = '#ffffff';
-      ctx.shadowBlur = 10;
-      ctx.beginPath();
-      ctx.arc(pole.x, 30, 7, 0, Math.PI * 2);
-      ctx.fill();
+      const bulbY = 30;
+
+      // Light pillar — faint glow rising from bulb upward
+      const pillarGrad = ctx.createLinearGradient(0, 0, 0, bulbY);
+      pillarGrad.addColorStop(0, 'rgba(200,220,255,0)');
+      pillarGrad.addColorStop(0.5, `rgba(200,220,255,${0.03 + 0.02 * Math.sin(this.time * 0.7 + pole.phase)})`);
+      pillarGrad.addColorStop(1, 'rgba(200,220,255,0.05)');
+      ctx.fillStyle = pillarGrad;
+      ctx.fillRect(pole.x - 3, 0, 6, bulbY);
+
+      // 3-bulb cluster with independent pulsing
+      for (let bi = 0; bi < 3; bi++) {
+        const by = bulbY + (bi - 1) * 6;
+        const bulbPulse = 6 + 8 * (0.5 + 0.5 * Math.sin(this.time * 1.2 + pole.phase + bi * 1.8));
+        ctx.fillStyle = '#ffffff';
+        ctx.shadowColor = '#ffffff';
+        ctx.shadowBlur = bulbPulse;
+        ctx.beginPath();
+        ctx.arc(pole.x, by, 4 + (bi === 1 ? 2 : 0), 0, Math.PI * 2);
+        ctx.fill();
+      }
       ctx.shadowBlur = 0;
-      
-      // Beam cone
+
+      // Beam cone — wider, warmer, brighter
       const beamLen = 340;
-      const beamEndWidth = 85;
+      const beamEndWidth = 120;
       const endX = pole.x + Math.cos(angle) * beamLen;
-      const endY = 30 + Math.sin(angle) * beamLen;
+      const endY = bulbY + Math.sin(angle) * beamLen;
       const dx = Math.cos(angle + Math.PI / 2) * beamEndWidth;
       const dy = Math.sin(angle + Math.PI / 2) * beamEndWidth;
-      
-      const lightGrad = ctx.createLinearGradient(pole.x, 30, endX, endY);
-      lightGrad.addColorStop(0, 'rgba(255, 255, 255, 0.22)');
-      lightGrad.addColorStop(0.3, 'rgba(255, 255, 255, 0.08)');
-      lightGrad.addColorStop(1, 'rgba(255, 255, 255, 0)');
+
+      const lightGrad = ctx.createLinearGradient(pole.x, bulbY, endX, endY);
+      lightGrad.addColorStop(0, 'rgba(255,248,230,0.28)');
+      lightGrad.addColorStop(0.3, 'rgba(255,248,230,0.10)');
+      lightGrad.addColorStop(1, 'rgba(255,248,230,0)');
       ctx.fillStyle = lightGrad;
-      
+
       ctx.beginPath();
-      ctx.moveTo(pole.x, 30);
+      ctx.moveTo(pole.x, bulbY);
       ctx.lineTo(endX - dx, endY - dy);
       ctx.lineTo(endX + dx, endY + dy);
       ctx.closePath();
+      ctx.fill();
+
+      // Ground light pool — elliptical spotlight where beam hits the field
+      const spotGrad = ctx.createRadialGradient(endX, HB_FIELD.GROUND_Y - 2, 2, endX, HB_FIELD.GROUND_Y - 2, 70);
+      spotGrad.addColorStop(0, `rgba(255,250,235,${0.06 + 0.03 * Math.sin(this.time * 0.5 + pole.phase)})`);
+      spotGrad.addColorStop(0.5, `rgba(255,250,235,${0.02})`);
+      spotGrad.addColorStop(1, 'rgba(255,250,235,0)');
+      ctx.fillStyle = spotGrad;
+      ctx.beginPath();
+      ctx.ellipse(endX, HB_FIELD.GROUND_Y - 2, 80, 12, 0, 0, Math.PI * 2);
       ctx.fill();
     }
     ctx.restore();
@@ -256,6 +306,18 @@ export class HBRenderer {
       ctx.moveTo(0, ry);
       ctx.lineTo(HB_FIELD.WIDTH, ry);
       ctx.stroke();
+
+      // Accent lights along each rail
+      for (let lx = 20; lx < HB_FIELD.WIDTH - 20; lx += 70) {
+        const lightPulse = 0.3 + 0.7 * (0.5 + 0.5 * Math.sin(this.time * 1.8 + r * 0.7 + lx * 0.04));
+        ctx.fillStyle = `rgba(0,170,255,${lightPulse * 0.5})`;
+        ctx.shadowColor = 'rgba(0,170,255,0.3)';
+        ctx.shadowBlur = 4;
+        ctx.beginPath();
+        ctx.arc(lx, ry, 1.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+      }
     }
 
     // Populate fans in a nice crowd
@@ -350,6 +412,16 @@ export class HBRenderer {
         }
       }
     }
+
+    // Light wash — subtle animated band sweeping across the stands
+    const washPhase = (this.time * 0.25) % 1;
+    const washX = washPhase * (HB_FIELD.WIDTH + 200) - 100;
+    const washGrad = ctx.createLinearGradient(washX - 80, 0, washX + 80, 0);
+    washGrad.addColorStop(0, 'rgba(255,255,255,0)');
+    washGrad.addColorStop(0.5, `rgba(200,220,255,${0.03 + 0.02 * Math.sin(this.time * 0.4)})`);
+    washGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = washGrad;
+    ctx.fillRect(0, 70, HB_FIELD.WIDTH, 258);
 
     // Camera flashes popping in the stands
     if (Math.random() < 0.12) {
@@ -446,12 +518,27 @@ export class HBRenderer {
     ctx.fill();
   }
 
+  private drawFog(ctx: CanvasRenderingContext2D) {
+    const fogWave = Math.sin(this.time * 0.3) * 8;
+    const fogGrad = ctx.createLinearGradient(0, HB_FIELD.GROUND_Y - 6 + fogWave, 0, HB_FIELD.GROUND_Y + 6 + fogWave);
+    fogGrad.addColorStop(0, 'rgba(180,200,220,0)');
+    fogGrad.addColorStop(0.3, `rgba(180,200,220,${0.035 + 0.015 * Math.sin(this.time * 0.2)})`);
+    fogGrad.addColorStop(0.7, `rgba(180,200,220,${0.025 + 0.015 * Math.sin(this.time * 0.25 + 1)})`);
+    fogGrad.addColorStop(1, 'rgba(180,200,220,0)');
+    ctx.fillStyle = fogGrad;
+    ctx.fillRect(0, HB_FIELD.GROUND_Y - 8, HB_FIELD.WIDTH, 16);
+  }
+
   private drawShadow(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
     const heightAbove = HB_FIELD.GROUND_Y - y;
     const alpha = Math.max(0.08, 0.3 - heightAbove / HB_FIELD.GROUND_Y * 0.25);
-    ctx.fillStyle = `rgba(0,0,0,${alpha})`;
+    const shadowGrad = ctx.createRadialGradient(x, HB_FIELD.GROUND_Y - 2, 0, x, HB_FIELD.GROUND_Y - 2, size * 1.8);
+    shadowGrad.addColorStop(0, `rgba(0,0,0,${alpha})`);
+    shadowGrad.addColorStop(0.4, `rgba(0,0,0,${alpha * 0.5})`);
+    shadowGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    ctx.fillStyle = shadowGrad;
     ctx.beginPath();
-    ctx.ellipse(x, HB_FIELD.GROUND_Y - 2, size * 1.5, 3, 0, 0, Math.PI * 2);
+    ctx.ellipse(x, HB_FIELD.GROUND_Y - 2, size * 1.8, 3.5, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
@@ -474,8 +561,20 @@ export class HBRenderer {
       const backX = side > 0 ? gx - depth : gx + depth;
       const insideDir = side > 0 ? -1 : 1;
       const glowColor = side > 0 ? COLORS.goalGlowAway : COLORS.goalGlowHome;
+      const breathAlpha = 0.15 + 0.08 * Math.sin(this.time * 1.5 + side * 0.7);
 
-      ctx.fillStyle = glowColor;
+      // Goal spotlight on the ground in front of goal mouth
+      const spotGrad = ctx.createRadialGradient(gx + insideDir * 40, groundY - 2, 2, gx + insideDir * 40, groundY - 2, 55);
+      spotGrad.addColorStop(0, `rgba(255,255,255,${0.04 + 0.03 * Math.sin(this.time * 0.8 + side)})`);
+      spotGrad.addColorStop(0.6, `rgba(255,255,255,${0.01})`);
+      spotGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = spotGrad;
+      ctx.beginPath();
+      ctx.ellipse(gx + insideDir * 40, groundY - 2, 65, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      const color = side > 0 ? `rgba(220,38,38,${breathAlpha})` : `rgba(37,99,235,${breathAlpha})`;
+      ctx.fillStyle = color;
       ctx.fillRect(Math.min(frontX, backX), goalY, depth, goalH);
 
       // Ground shadows
