@@ -1,8 +1,6 @@
 export class HBSound {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
-  private crowdGain: GainNode | null = null;
-  private crowdSource: AudioBufferSourceNode | null = null;
   private _isMuted = false;
   private _inited = false;
 
@@ -15,7 +13,6 @@ export class HBSound {
       this.masterGain = this.ctx.createGain();
       this.masterGain.gain.value = 0.5;
       this.masterGain.connect(this.ctx.destination);
-      this.startCrowd();
       this._inited = true;
     } catch { /* audio not supported */ }
   }
@@ -26,62 +23,10 @@ export class HBSound {
     }
   }
 
-  private startCrowd() {
-    if (!this.ctx || !this.masterGain) return;
-    const ctx = this.ctx;
-    const sr = ctx.sampleRate;
-    const len = sr * 4;
-    const buf = ctx.createBuffer(1, len, sr);
-    const data = buf.getChannelData(0);
-    let last = 0;
-    for (let i = 0; i < len; i++) {
-      last = (last + (Math.random() - 0.5) * 0.4) * 0.98;
-      data[i] = last;
-    }
-
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.loop = true;
-
-    const bp = ctx.createBiquadFilter();
-    bp.type = 'bandpass';
-    bp.frequency.value = 600;
-    bp.Q.value = 0.8;
-
-    const hp = ctx.createBiquadFilter();
-    hp.type = 'highpass';
-    hp.frequency.value = 200;
-
-    this.crowdGain = ctx.createGain();
-    this.crowdGain.gain.value = 0.2;
-
-    src.connect(bp);
-    bp.connect(hp);
-    hp.connect(this.crowdGain);
-    this.crowdGain.connect(this.masterGain);
-    src.start();
-    this.crowdSource = src;
-  }
-
-  private stopCrowd() {
-    if (this.crowdSource) {
-      try { this.crowdSource.stop(); } catch {}
-      this.crowdSource = null;
-    }
-    this.crowdGain = null;
-  }
-
   playCheer() {
     if (!this.ctx || !this.masterGain || this._isMuted) return;
     this.ensureResumed();
     const ctx = this.ctx;
-
-    if (this.crowdGain) {
-      this.crowdGain.gain.cancelScheduledValues(ctx.currentTime);
-      this.crowdGain.gain.setValueAtTime(this.crowdGain.gain.value, ctx.currentTime);
-      this.crowdGain.gain.linearRampToValueAtTime(0.4, ctx.currentTime + 0.1);
-      this.crowdGain.gain.linearRampToValueAtTime(0.15, ctx.currentTime + 2.5);
-    }
 
     for (let i = 0; i < 3; i++) {
       const osc = ctx.createOscillator();
@@ -144,15 +89,9 @@ export class HBSound {
       if (v) msg.voice = v;
       msg.rate = 0.85 + Math.random() * 0.35;
       msg.pitch = 0.5 + Math.random() * 0.7;
-      msg.volume = 0.10;
+      msg.volume = 0.8;
       msg.lang = 'en-US';
       setTimeout(() => speechSynthesis.speak(msg), i * 100 + Math.random() * 60);
-    }
-    if (this.crowdGain) {
-      this.crowdGain.gain.cancelScheduledValues(this.ctx!.currentTime);
-      this.crowdGain.gain.setValueAtTime(this.crowdGain.gain.value, this.ctx!.currentTime);
-      this.crowdGain.gain.linearRampToValueAtTime(0.35, this.ctx!.currentTime + 0.15);
-      this.crowdGain.gain.linearRampToValueAtTime(0.15, this.ctx!.currentTime + 3);
     }
   }
 
@@ -165,7 +104,6 @@ export class HBSound {
   }
 
   destroy() {
-    this.stopCrowd();
     if (this.ctx) {
       try { this.ctx.close(); } catch {}
       this.ctx = null;
