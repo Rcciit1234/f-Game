@@ -112,37 +112,21 @@ export class HBMenu {
   75% { transform: translate(-25px, -10px) rotate(270deg) scale(0.95); }
   100% { transform: translate(0, 0) rotate(360deg) scale(1); }
 }
-@keyframes hfCheerBlue {
-  0%, 2%, 28%, 100% { transform: translateY(0); }
-  3%, 12% { transform: translateY(-4px); }
+@keyframes hbGoalCheer {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+  25% { transform: translateY(-6px) scale(1.15); opacity: 1; }
+  50% { transform: translateY(0) scale(1); opacity: 0.7; }
+  75% { transform: translateY(-4px) scale(1.08); opacity: 0.9; }
 }
-@keyframes hfCheerRed {
-  0%, 52%, 78%, 100% { transform: translateY(0); }
-  53%, 62% { transform: translateY(-4px); }
+@keyframes hbGoalCheer2 {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.5; }
+  20% { transform: translateY(-5px) scale(1.12); opacity: 0.9; }
+  60% { transform: translateY(2px) scale(0.95); opacity: 0.6; }
+  80% { transform: translateY(-3px) scale(1.05); opacity: 0.8; }
 }
-@keyframes hfArmLUp {
-  0%, 2%, 28%, 100% { transform: rotate(0deg); }
-  3%, 12% { transform: rotate(-65deg) translateX(-2px); }
-}
-@keyframes hfArmRUp {
-  0%, 2%, 28%, 100% { transform: rotate(0deg); }
-  3%, 12% { transform: rotate(65deg) translateX(2px); }
-}
-@keyframes hfArmLRed {
-  0%, 52%, 78%, 100% { transform: rotate(0deg); }
-  53%, 62% { transform: rotate(-65deg) translateX(-2px); }
-}
-@keyframes hfArmRRed {
-  0%, 52%, 78%, 100% { transform: rotate(0deg); }
-  53%, 62% { transform: rotate(65deg) translateX(2px); }
-}
-@keyframes hfBubbleBlue {
-  0%, 2%, 25%, 100% { opacity: 0; transform: scale(0) translateY(0); }
-  3%, 12% { opacity: 1; transform: scale(1) translateY(0); }
-}
-@keyframes hfBubbleRed {
-  0%, 52%, 75%, 100% { opacity: 0; transform: scale(0) translateY(0); }
-  53%, 62% { opacity: 1; transform: scale(1) translateY(0); }
+@keyframes hbGoalGlow {
+  0%, 100% { filter: drop-shadow(0 0 8px currentColor); }
+  50% { filter: drop-shadow(0 0 25px currentColor); }
 }
 @keyframes hbFlagFloat {
   0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -252,25 +236,6 @@ export class HBMenu {
   }
 
   private wrap(inner: string) {
-    const fan = (side: 'L' | 'R', team: 'blue' | 'red', idx: number, top: number, left: number) => {
-      const isBlue = team === 'blue';
-      const color = isBlue ? '#6abfde' : '#c60b1e';
-      const bodyClass = isBlue ? 'hf-body-b' : 'hf-body-r';
-      const cheerAnim = isBlue ? 'hfCheerBlue' : 'hfCheerRed';
-      const armL = isBlue ? 'hfArmLUp' : 'hfArmLRed';
-      const armR = isBlue ? 'hfArmRUp' : 'hfArmRRed';
-      const bubble = isBlue ? 'hfBubbleBlue' : 'hfBubbleRed';
-      const delay = idx * 0.3;
-      return `<div style="position:absolute;top:${top}%;left:${left}%;animation:${cheerAnim} 10s ease-in-out ${delay}s infinite;">
-        <div style="position:absolute;top:-20px;left:50%;transform:translateX(-50%);white-space:nowrap;font-size:7px;font-weight:900;color:#00f0ff;animation:${bubble} 10s ease-in-out ${delay}s infinite;">⚽ GOAL!</div>
-        <div style="width:12px;height:12px;border-radius:50%;background:#f0d0b0;margin:0 auto;position:relative;z-index:1;"></div>
-        <div style="position:relative;width:14px;height:18px;border-radius:2px 2px 0 0;background:${color};margin:0 auto;">
-          <div style="position:absolute;top:-16px;right:100%;width:2.5px;height:12px;background:#f0d0b0;border-radius:2px;transform-origin:bottom center;animation:${armL} 10s ease-in-out ${delay}s infinite;"></div>
-          <div style="position:absolute;top:-16px;left:100%;width:2.5px;height:12px;background:#f0d0b0;border-radius:2px;transform-origin:bottom center;animation:${armR} 10s ease-in-out ${delay}s infinite;"></div>
-        </div>
-      </div>`;
-    };
-
     return `
       <div style="position:relative;overflow:hidden;height:100%;background:linear-gradient(180deg,#0d0d1a 0%,#1a1530 30%,#1a0a00 55%,#0d0d1a 100%);color:#fff;font-family:sans-serif;">
         <div style="position:absolute;inset:0;opacity:0.08;background-image:linear-gradient(rgba(255,200,100,0.03) 1px,transparent 1px),linear-gradient(90deg,rgba(255,200,100,0.03) 1px,transparent 1px);background-size:60px 60px;transform:perspective(300px) rotateX(60deg);transform-origin:center bottom;"></div>
@@ -314,13 +279,11 @@ export class HBMenu {
           <div style="text-align:center;font-size:8px;font-weight:700;color:rgba(255,255,255,0.35);margin-top:4px;letter-spacing:1px;">ESPAÑA</div>
         </div>
 
-        ${fan('L', 'blue', 0, 20, 8)}
-        ${fan('L', 'blue', 1, 30, 11)}
-        ${fan('L', 'blue', 2, 40, 7)}
+        <div style="position:absolute;top:18%;left:3%;font-size:32px;font-weight:900;color:#6abfde;text-shadow:0 0 10px rgba(106,191,222,0.3);animation:hbGoalCheer 4s ease-in-out infinite, hbGoalGlow 2s ease-in-out infinite;pointer-events:none;z-index:10;">¡GOOOOL!</div>
+        <div style="position:absolute;top:26%;left:4%;font-size:24px;font-weight:900;color:#6abfde;opacity:0.7;animation:hbGoalCheer2 3.5s ease-in-out 1s infinite, hbGoalGlow 2.5s ease-in-out 0.5s infinite;pointer-events:none;z-index:10;">⚽ GOAL ⚽</div>
 
-        ${fan('R', 'red', 0, 22, 83)}
-        ${fan('R', 'red', 1, 32, 80)}
-        ${fan('R', 'red', 2, 42, 86)}
+        <div style="position:absolute;top:18%;right:3%;font-size:32px;font-weight:900;color:#c60b1e;text-shadow:0 0 10px rgba(198,11,30,0.3);animation:hbGoalCheer2 4s ease-in-out 0.5s infinite, hbGoalGlow 2s ease-in-out 1s infinite;pointer-events:none;z-index:10;">¡GOOOL!</div>
+        <div style="position:absolute;top:26%;right:4%;font-size:24px;font-weight:900;color:#c60b1e;opacity:0.7;animation:hbGoalCheer 3.5s ease-in-out 1.5s infinite, hbGoalGlow 2.5s ease-in-out 0.3s infinite;pointer-events:none;z-index:10;">⚽ GOAL ⚽</div>
 
         <div style="position:absolute;font-size:22px;top:18%;left:22%;opacity:0.06;animation:hbFooty1 14s linear infinite;pointer-events:none;">⚽</div>
         <div style="position:absolute;font-size:16px;top:35%;right:20%;opacity:0.04;animation:hbFooty2 18s linear infinite;pointer-events:none;">⚽</div>
