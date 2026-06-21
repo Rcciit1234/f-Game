@@ -132,6 +132,30 @@ export class HBSound {
     osc.stop(ctx.currentTime + 0.4);
   }
 
+  playChant(team: 'home' | 'away') {
+    if (this._isMuted || !window.speechSynthesis) return;
+    this.ensureResumed();
+    window.speechSynthesis.cancel();
+    const text = team === 'home' ? 'Go Argentina' : 'Go Spain';
+    const voices = window.speechSynthesis.getVoices();
+    for (let i = 0; i < 4; i++) {
+      const msg = new SpeechSynthesisUtterance(text);
+      const v = voices.find(v => v.lang.startsWith('en')) || voices[i] || null;
+      if (v) msg.voice = v;
+      msg.rate = 0.85 + Math.random() * 0.35;
+      msg.pitch = 0.5 + Math.random() * 0.7;
+      msg.volume = 0.10;
+      msg.lang = 'en-US';
+      setTimeout(() => speechSynthesis.speak(msg), i * 100 + Math.random() * 60);
+    }
+    if (this.crowdGain) {
+      this.crowdGain.gain.cancelScheduledValues(this.ctx!.currentTime);
+      this.crowdGain.gain.setValueAtTime(this.crowdGain.gain.value, this.ctx!.currentTime);
+      this.crowdGain.gain.linearRampToValueAtTime(0.35, this.ctx!.currentTime + 0.15);
+      this.crowdGain.gain.linearRampToValueAtTime(0.15, this.ctx!.currentTime + 3);
+    }
+  }
+
   toggleMute() {
     this._isMuted = !this._isMuted;
     if (this.masterGain) {

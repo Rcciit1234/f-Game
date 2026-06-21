@@ -6,7 +6,7 @@ export class HBMatch {
   state: HBMatchState;
   private goalScoredTimer = 0;
   private countdownInterval: ReturnType<typeof setInterval> | null = null;
-  private onScoreChange?: (home: number, away: number) => void;
+  private onScoreChange?: (home: number, away: number, scoringTeam?: 'home' | 'away' | null) => void;
   private onStateChange?: (state: string) => void;
   onDefence?: (x: number, y: number) => void;
   onSuperKick?: (x: number, y: number, dir: number) => void;
@@ -31,7 +31,7 @@ export class HBMatch {
     return { x: HB_FIELD.WIDTH / 2, y: HB_FIELD.GROUND_Y - HB_BALL.RADIUS - 10, vx: 0, vy: 0, radius: HB_BALL.RADIUS, lastTouchBy: null, lastTouchTeam: null, skyLobActive: false };
   }
 
-  setCallbacks(onScore: (h: number, a: number) => void, onState: (s: string) => void) {
+  setCallbacks(onScore: (h: number, a: number, scoringTeam?: 'home' | 'away' | null) => void, onState: (s: string) => void) {
     this.onScoreChange = onScore;
     this.onStateChange = onState;
   }
@@ -100,7 +100,7 @@ export class HBMatch {
       if (scoring === 'home') this.state.homeScore++;
       else this.state.awayScore++;
 
-      this.onScoreChange?.(this.state.homeScore, this.state.awayScore);
+      this.onScoreChange?.(this.state.homeScore, this.state.awayScore, scoring);
 
       if (this.state.homeScore >= HB_MATCH.WIN_GOALS || this.state.awayScore >= HB_MATCH.WIN_GOALS) {
         this.state.state = 'ended';

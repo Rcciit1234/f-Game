@@ -40,7 +40,7 @@ export class HBGame {
     if (mode === 'local_ai') {
       this.match = new HBMatch('player1', 'You', 'player2', 'AI');
       this.match.setCallbacks(
-        () => { sound.playCheer(); },
+        (h, a, team) => { sound.playCheer(); if (team) sound.playChant(team); },
         (s) => {
           if (s === 'countdown') sound.playWhistle();
           if (s === 'playing') sound.playWhistle();
@@ -89,6 +89,8 @@ export class HBGame {
     };
 
     network.onGoal = (data) => {
+      sound.playCheer();
+      if (data.team === 'home' || data.team === 'away') sound.playChant(data.team);
       if (this.onlineState) {
         this.onlineState.homeScore = data.homeScore;
         this.onlineState.awayScore = data.awayScore;
