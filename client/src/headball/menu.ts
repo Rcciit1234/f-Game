@@ -3,6 +3,26 @@ import { sound } from './sound.js';
 
 type MenuState = 'main' | 'creating' | 'host_waiting' | 'joining' | 'joined' | 'error';
 
+interface MenuPlayerConfig {
+  name: string;
+  team: 'argentina' | 'spain';
+  jerseyNumber: string;
+  hairColor: string;
+  hasBeard: boolean;
+  pose: 'idle' | 'kick' | 'victory' | 'header' | 'sprint';
+  phaseOffset: number;
+  skinColor: string;
+}
+
+const MENU_PLAYERS: MenuPlayerConfig[] = [
+  { name: 'MESSI', team: 'argentina', jerseyNumber: '10', hairColor: '#3a2a1a', hasBeard: true, pose: 'idle', phaseOffset: 0, skinColor: '#f0c8a0' },
+  { name: 'DI MARIA', team: 'argentina', jerseyNumber: '11', hairColor: '#6a4a2a', hasBeard: false, pose: 'kick', phaseOffset: 0.6, skinColor: '#f0c8a0' },
+  { name: 'MARADONA', team: 'argentina', jerseyNumber: '10', hairColor: '#2a1a0a', hasBeard: false, pose: 'victory', phaseOffset: 1.2, skinColor: '#f0d0b0' },
+  { name: 'INIESTA', team: 'spain', jerseyNumber: '8', hairColor: '#9a8a7a', hasBeard: false, pose: 'idle', phaseOffset: 0.3, skinColor: '#f0c8a0' },
+  { name: 'RAMOS', team: 'spain', jerseyNumber: '15', hairColor: '#3a2a1a', hasBeard: false, pose: 'header', phaseOffset: 0.9, skinColor: '#f0c8a0' },
+  { name: 'TORRES', team: 'spain', jerseyNumber: '9', hairColor: '#8a7a5a', hasBeard: false, pose: 'sprint', phaseOffset: 1.5, skinColor: '#f0d0b0' },
+];
+
 export class HBMenu {
   private container: HTMLElement;
   private onStartAI: () => void;
@@ -360,11 +380,19 @@ export class HBMenu {
       ctx.clearRect(0, 0, w, h);
 
       const time = this.menuAnimTime;
-      const s = Math.min(w / 540, h / 600) * 0.7;
-      const cy = h * 0.56;
+      const s = Math.min(w / 540, h / 600) * 0.5;
+      const leftX = w * 0.2;
+      const rightX = w * 0.8;
+      const topY = h * 0.28;
+      const midY = h * 0.50;
+      const botY = h * 0.72;
 
-      this.drawMenuChar(ctx, w * 0.22, cy, s, time, true);
-      this.drawMenuChar(ctx, w * 0.78, cy, s, time, false);
+      this.drawMenuChar(ctx, leftX, topY, s, time, MENU_PLAYERS[0]);
+      this.drawMenuChar(ctx, leftX, midY, s, time, MENU_PLAYERS[1]);
+      this.drawMenuChar(ctx, leftX, botY, s, time, MENU_PLAYERS[2]);
+      this.drawMenuChar(ctx, rightX, topY, s, time, MENU_PLAYERS[3]);
+      this.drawMenuChar(ctx, rightX, midY, s, time, MENU_PLAYERS[4]);
+      this.drawMenuChar(ctx, rightX, botY, s, time, MENU_PLAYERS[5]);
 
       ctx.fillStyle = 'rgba(255,255,255,0.04)';
       for (let i = 0; i < 8; i++) {
@@ -385,24 +413,65 @@ export class HBMenu {
     ctx: CanvasRenderingContext2D,
     cx: number, cy: number,
     scale: number, time: number,
-    isArgentina: boolean,
+    config: MenuPlayerConfig,
   ) {
     ctx.save();
     ctx.translate(cx, cy);
     ctx.scale(scale, scale);
 
-    const skin = '#f0c8a0';
-    const jersey = isArgentina ? '#6abfde' : '#c60b1e';
+    const isArg = config.team === 'argentina';
+    const jersey = isArg ? '#6abfde' : '#c60b1e';
     const bW = 44, bH = 38, hr = 34;
     const headY = -hr * 0.5;
-    const num = isArgentina ? '10' : '8';
-    const hair = isArgentina ? '#3a2a1a' : '#9a8a7a';
-    const bob = Math.sin(time * 2.5) * 3;
-    const armWave = Math.sin(time * 4) * 7;
-    const blinkCycle = time % 4;
-    const blinking = blinkCycle > 3.85;
-    const lookX = isArgentina ? 2 : -2;
+    const skin = config.skinColor;
 
+    // ─── Pose parameters ───
+    const off = config.phaseOffset;
+    const bobAmp = config.pose === 'kick' ? 0 : config.pose === 'victory' ? 4 : config.pose === 'sprint' ? 1 : 3;
+    const bob = Math.sin(time * 2.5 + off) * bobAmp;
+    const blinkCycle = (time + off) % 4;
+    const blinking = blinkCycle > 3.85;
+    let lookX = isArg ? 2 : -2;
+
+    let armLAngle = 6, armRAngle = 6;
+    let armWaveAmp = 7;
+    let lArmY = -8, rArmY = -8;
+    let lLegX = -12, lLegY = 12, rLegX = 12, rLegY = 12;
+    let headTilt = 0;
+    let mouthR = 8, mouthOpen = false;
+    let bodySquashY = 0;
+
+    if (config.pose === 'kick') {
+      lLegX = -22; lLegY = 2;
+      rLegX = 6; rLegY = 16;
+      armWaveAmp = 12;
+      lArmY = -14; rArmY = -2;
+      mouthR = 7;
+    } else if (config.pose === 'victory') {
+      lArmY = -26; rArmY = -26;
+      armWaveAmp = 5;
+      mouthR = 11;
+      mouthOpen = true;
+      headTilt = -0.05;
+    } else if (config.pose === 'header') {
+      lArmY = -4; rArmY = -4;
+      armWaveAmp = 3;
+      headTilt = 0.08;
+      lookX = 0;
+      mouthR = 6;
+    } else if (config.pose === 'sprint') {
+      lLegX = -8; lLegY = 14;
+      rLegX = 16; rLegY = 4;
+      lArmY = -6; rArmY = -12;
+      armWaveAmp = 9;
+      bodySquashY = 2;
+      mouthR = 6;
+    }
+
+    const lArmAngle = armLAngle + Math.sin(time * 3.5 + off) * armWaveAmp;
+    const rArmAngle = armRAngle + Math.sin(time * 3.5 + off + 0.5) * armWaveAmp;
+
+    // Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.18)';
     ctx.beginPath();
     ctx.ellipse(0, bH + 16, bW * 0.6, 5, 0, 0, Math.PI * 2);
@@ -410,24 +479,45 @@ export class HBMenu {
 
     ctx.translate(0, bob);
 
+    // Head tilt
+    if (headTilt !== 0) {
+      ctx.translate(0, headTilt < 0 ? -4 : 2);
+      ctx.rotate(headTilt);
+    }
+
+    // Body squash
+    if (bodySquashY !== 0) {
+      ctx.translate(0, bodySquashY);
+    }
+
+    // Legs
     ctx.strokeStyle = '#222';
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     ctx.beginPath();
-    ctx.moveTo(-8, bH - 4); ctx.lineTo(-12, bH + 12);
-    ctx.moveTo(8, bH - 4); ctx.lineTo(12, bH + 12);
+    ctx.moveTo(-8, bH - 4); ctx.lineTo(lLegX, lLegY + bH);
+    ctx.moveTo(8, bH - 4); ctx.lineTo(rLegX, rLegY + bH);
     ctx.stroke();
 
+    // Feet
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(lLegX, lLegY + bH, 3.5, 0, Math.PI * 2);
+    ctx.arc(rLegX, rLegY + bH, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Body
     ctx.fillStyle = jersey;
     ctx.beginPath();
     ctx.roundRect(-bW / 2, 0, bW, bH, 6);
     ctx.fill();
 
+    // Team stripes
     ctx.save();
     ctx.beginPath();
     ctx.roundRect(-bW / 2, 0, bW, bH, 6);
     ctx.clip();
-    if (isArgentina) {
+    if (isArg) {
       ctx.fillStyle = 'rgba(255,255,255,0.35)';
       for (let i = -20; i < 30; i += 8) ctx.fillRect(i, 0, 3, bH);
     } else {
@@ -436,33 +526,38 @@ export class HBMenu {
     }
     ctx.restore();
 
+    // Jersey number
     ctx.fillStyle = '#fff';
     ctx.font = 'bold 15px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(num, 0, bH * 0.55);
+    ctx.fillText(config.jerseyNumber, 0, bH * 0.55);
 
+    // Arms
     ctx.strokeStyle = skin;
     ctx.lineWidth = 6;
     ctx.lineCap = 'round';
     ctx.beginPath();
     ctx.moveTo(-bW / 2, 6);
-    ctx.lineTo(-bW / 2 - 20, -8 + armWave);
+    ctx.lineTo(-bW / 2 - 20, lArmY + lArmAngle);
     ctx.moveTo(bW / 2, 6);
-    ctx.lineTo(bW / 2 + 20, -8 - armWave);
+    ctx.lineTo(bW / 2 + 20, rArmY + rArmAngle);
     ctx.stroke();
 
+    // Hands
     ctx.fillStyle = skin;
     ctx.beginPath();
-    ctx.arc(-bW / 2 - 20, -8 + armWave, 4, 0, Math.PI * 2);
-    ctx.arc(bW / 2 + 20, -8 - armWave, 4, 0, Math.PI * 2);
+    ctx.arc(-bW / 2 - 20, lArmY + lArmAngle, 4, 0, Math.PI * 2);
+    ctx.arc(bW / 2 + 20, rArmY + rArmAngle, 4, 0, Math.PI * 2);
     ctx.fill();
 
+    // Head
     ctx.fillStyle = skin;
     ctx.beginPath();
     ctx.arc(0, headY, hr, 0, Math.PI * 2);
     ctx.fill();
 
+    // Headband
     ctx.fillStyle = jersey;
     ctx.beginPath();
     ctx.ellipse(0, headY - hr * 0.35, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
@@ -471,17 +566,19 @@ export class HBMenu {
     ctx.lineWidth = 1;
     ctx.stroke();
 
+    // Headband stripes
     ctx.save();
     ctx.beginPath();
     ctx.ellipse(0, headY - hr * 0.35, hr * 0.85, 5.5, 0, 0, Math.PI * 2);
     ctx.clip();
-    if (isArgentina) {
+    if (isArg) {
       ctx.fillStyle = '#fff';
       for (let i = -24; i < 30; i += 7) ctx.fillRect(i, headY - hr * 0.35 - 6, 2.5, 12);
     }
     ctx.restore();
 
-    ctx.fillStyle = hair;
+    // Hair
+    ctx.fillStyle = config.hairColor;
     ctx.beginPath();
     ctx.arc(0, headY - hr * 0.35, hr * 1.05, Math.PI * 1.05, Math.PI * 1.95);
     ctx.fill();
@@ -489,59 +586,84 @@ export class HBMenu {
     ctx.ellipse(0, headY - hr * 0.8, hr * 1, hr * 0.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
+    // Eyes
     if (blinking) {
       ctx.strokeStyle = '#111';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(-16, headY - 2); ctx.lineTo(-4, headY - 2);
-      ctx.moveTo(4, headY - 2); ctx.lineTo(16, headY - 2);
+      ctx.moveTo(-14, headY - 2); ctx.lineTo(-4, headY - 2);
+      ctx.moveTo(4, headY - 2); ctx.lineTo(14, headY - 2);
       ctx.stroke();
     } else {
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.ellipse(-10, headY - 2, 7, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(-10, headY - 2, 6, 7, 0, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.ellipse(10, headY - 2, 7, 8, 0, 0, Math.PI * 2);
+      ctx.ellipse(10, headY - 2, 6, 7, 0, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#111';
       ctx.beginPath();
-      ctx.arc(-10 + lookX, headY - 1, 3.5, 0, Math.PI * 2);
+      ctx.arc(-10 + lookX, headY - 1, 3, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(10 + lookX, headY - 1, 3.5, 0, Math.PI * 2);
+      ctx.arc(10 + lookX, headY - 1, 3, 0, Math.PI * 2);
       ctx.fill();
 
       ctx.fillStyle = '#fff';
       ctx.beginPath();
-      ctx.arc(-8 + lookX, headY - 4, 1.5, 0, Math.PI * 2);
+      ctx.arc(-8 + lookX, headY - 4, 1.3, 0, Math.PI * 2);
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(12 + lookX, headY - 4, 1.5, 0, Math.PI * 2);
+      ctx.arc(12 + lookX, headY - 4, 1.3, 0, Math.PI * 2);
       ctx.fill();
     }
 
-    ctx.strokeStyle = hair;
+    // Eyebrows
+    ctx.strokeStyle = config.hairColor;
     ctx.lineWidth = 2.5;
     ctx.beginPath();
     ctx.moveTo(-17, headY - 13); ctx.lineTo(-5, headY - 12);
     ctx.moveTo(5, headY - 12); ctx.lineTo(17, headY - 13);
     ctx.stroke();
 
-    ctx.strokeStyle = '#b91c1c';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(0, headY + 10, 8, 0.15, Math.PI - 0.15);
-    ctx.stroke();
+    // Mouth
+    if (mouthOpen) {
+      ctx.fillStyle = '#222';
+      ctx.beginPath();
+      ctx.ellipse(0, headY + 9, mouthR, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e8a0a0';
+      ctx.beginPath();
+      ctx.ellipse(0, headY + 8, mouthR * 0.7, 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+    } else {
+      ctx.strokeStyle = '#b91c1c';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(0, headY + 10, mouthR, 0.15, Math.PI - 0.15);
+      ctx.stroke();
+    }
 
-    if (isArgentina) {
+    // Beard
+    if (config.hasBeard) {
       ctx.fillStyle = 'rgba(50,35,20,0.18)';
       ctx.beginPath();
       ctx.ellipse(0, headY + 5, 13, 7, 0, 0, Math.PI * 2);
       ctx.fill();
     }
 
+    ctx.restore();
+
+    // Name label below character
+    ctx.save();
+    ctx.translate(cx, cy + scale * (bH + 28));
+    ctx.fillStyle = 'rgba(255,255,255,0.4)';
+    ctx.font = `bold ${Math.round(scale * 8)}px sans-serif`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText(`#${config.jerseyNumber} ${config.name}`, 0, 0);
     ctx.restore();
   }
 
