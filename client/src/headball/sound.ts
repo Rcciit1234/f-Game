@@ -28,6 +28,7 @@ export class HBSound {
 
   private playMenuMusic() {
     if (!this.ctx || !this.masterGain) return;
+    this.ensureResumed();
     fetch('/song.mp3')
       .then(r => r.arrayBuffer())
       .then(buf => this.ctx!.decodeAudioData(buf))

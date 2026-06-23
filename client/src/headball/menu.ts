@@ -55,6 +55,7 @@ export class HBMenu {
     this.network = network;
     HBMenu.injectStyles();
     this.setupNetwork();
+    sound.init();
     this.buildMain();
   }
 
@@ -329,6 +330,7 @@ export class HBMenu {
     this.menuAnimLastTime = 0;
 
     const loop = (t: number) => {
+      sound.ensureResumed();
       if (!this.menuCanvas || !document.contains(this.menuCanvas)) {
         this.animFrameId = 0;
         return;
