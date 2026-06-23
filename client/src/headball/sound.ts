@@ -1,6 +1,8 @@
 export class HBSound {
   private ctx: AudioContext | null = null;
   private masterGain: GainNode | null = null;
+  private bgmGain: GainNode | null = null;
+  private bgmSource: AudioBufferSourceNode | null = null;
   private _isMuted = false;
   private _inited = false;
 
@@ -14,12 +16,45 @@ export class HBSound {
       this.masterGain.gain.value = 0.5;
       this.masterGain.connect(this.ctx.destination);
       this._inited = true;
+      this.playMenuMusic();
     } catch { /* audio not supported */ }
   }
 
   ensureResumed() {
     if (this.ctx?.state === 'suspended') {
       this.ctx.resume();
+    }
+  }
+
+  private playMenuMusic() {
+    if (!this.ctx || !this.masterGain) return;
+    fetch('/song.mp3')
+      .then(r => r.arrayBuffer())
+      .then(buf => this.ctx!.decodeAudioData(buf))
+      .then(audio => {
+        this.stopMenuMusic();
+        this.bgmGain = this.ctx!.createGain();
+        this.bgmGain.gain.value = 0.35;
+        this.bgmGain.connect(this.masterGain!);
+        const src = this.ctx!.createBufferSource();
+        src.buffer = audio;
+        src.loop = true;
+        src.connect(this.bgmGain);
+        src.start();
+        this.bgmSource = src;
+      })
+      .catch(() => {});
+  }
+
+  private stopMenuMusic() {
+    if (this.bgmSource) {
+      try { this.bgmSource.stop(); } catch {}
+      this.bgmSource.disconnect();
+      this.bgmSource = null;
+    }
+    if (this.bgmGain) {
+      this.bgmGain.disconnect();
+      this.bgmGain = null;
     }
   }
 
@@ -104,6 +139,7 @@ export class HBSound {
   }
 
   destroy() {
+    this.stopMenuMusic();
     if (this.ctx) {
       try { this.ctx.close(); } catch {}
       this.ctx = null;
