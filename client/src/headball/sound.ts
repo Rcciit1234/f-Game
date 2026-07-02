@@ -87,7 +87,7 @@ export class HBSound {
     osc.type = 'square';
     osc.frequency.setValueAtTime(120, ctx.currentTime);
     osc.frequency.exponentialRampToValueAtTime(40, ctx.currentTime + 0.08);
-    g.gain.setValueAtTime(0.2, ctx.currentTime);
+    g.gain.setValueAtTime(0.08, ctx.currentTime);
     g.gain.linearRampToValueAtTime(0, ctx.currentTime + 0.08);
     osc.connect(g);
     g.connect(this.masterGain);
