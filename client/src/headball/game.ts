@@ -50,9 +50,9 @@ export class HBGame {
           }
         }
       );
-      this.match.onDefence = (x, y) => { sound.playKick(); this.renderer.spawnDefencePuff(x, y); };
-      this.match.onSuperKick = (x, y, dir) => { sound.playKick(); this.renderer.triggerSuperKickFlash(x, y, dir); };
-      this.match.onKick = () => sound.playKick();
+      this.match.onDefence = (x, y) => { this.renderer.spawnDefencePuff(x, y); };
+      this.match.onSuperKick = (x, y, dir) => { this.renderer.triggerSuperKickFlash(x, y, dir); };
+      this.match.onKick = () => {};
       this.controls.onInput((input) => {
         this.localInput = { ...input };
       });
